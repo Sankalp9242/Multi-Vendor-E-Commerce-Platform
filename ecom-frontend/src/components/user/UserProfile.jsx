@@ -4,7 +4,13 @@ import { Link } from "react-router-dom";
 const UserProfile = () => {
   const { user } = useSelector(state => state.auth);
 
-  const role = user?.roles?.[0]?.replace("ROLE_", "");
+  const role = user?.roles?.includes("ROLE_ADMIN")
+    ? "ADMIN"
+    : user?.roles?.includes("ROLE_SELLER")
+      ? "SELLER"
+      : user?.roles?.includes("ROLE_USER")
+        ? "USER"
+        : "";
 
   return (
     <div style={{ maxWidth: "600px", margin: "40px auto" }}>

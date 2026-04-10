@@ -30,12 +30,19 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class AuthServiceImpl implements AuthService {
+
+    private static final Map<String, Integer> ROLE_PRIORITY = Map.of(
+            "ROLE_ADMIN", 0,
+            "ROLE_SELLER", 1,
+            "ROLE_USER", 2
+    );
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -68,6 +75,10 @@ public class AuthServiceImpl implements AuthService {
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
+                .sorted((left, right) -> Integer.compare(
+                        ROLE_PRIORITY.getOrDefault(left, Integer.MAX_VALUE),
+                        ROLE_PRIORITY.getOrDefault(right, Integer.MAX_VALUE)
+                ))
                 .collect(Collectors.toList());
 
         UserInfoResponse response = new UserInfoResponse(userDetails.getId(),
@@ -132,6 +143,10 @@ public class AuthServiceImpl implements AuthService {
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
+                .sorted((left, right) -> Integer.compare(
+                        ROLE_PRIORITY.getOrDefault(left, Integer.MAX_VALUE),
+                        ROLE_PRIORITY.getOrDefault(right, Integer.MAX_VALUE)
+                ))
                 .collect(Collectors.toList());
 
         UserInfoResponse response = new UserInfoResponse(userDetails.getId(),
