@@ -1,22 +1,20 @@
 import { Button, FormControl, FormHelperText, InputLabel, MenuItem, Select } from '@mui/material'
-import React, { useState } from 'react'
-import { FaSpinner } from 'react-icons/fa';
+import { useState } from 'react'
 import Spinners from '../../shared/Spinners';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateOrderStatusFromDashboard } from '../../../store/actions';
 import toast from 'react-hot-toast';
 
 const ORDER_STATUSES = [
-    "Pending",
-    "Processing",
-    "Shipped",
-    "Delivered",
-    "Cancelled",
-    "Accepted",
+    "PENDING",
+    "CONFIRMED",
+    "SHIPPED",
+    "DELIVERED",
+    "CANCELLED",
 ];
 
 const UpdateOrderForm = ({ setOpen, selectedId, selectedItem, loader, setLoader}) => {
-    const [orderStatus, setOrderStatus] = useState(selectedItem?.status || 'Accepted');
+    const [orderStatus, setOrderStatus] = useState(selectedItem?.status || 'PENDING');
     const [error, setError] = useState("");
     const dispatch = useDispatch();
 

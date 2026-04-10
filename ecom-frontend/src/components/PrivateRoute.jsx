@@ -1,44 +1,30 @@
-import React from 'react'
-import { useSelector } from 'react-redux'
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import React from 'react';
+import { useSelector } from 'react-redux';
+import { Navigate, Outlet } from 'react-router-dom';
 
+const PrivateRoute = ({ publicPage = false, adminOnly = false, sellerOnly = false }) => {
+  const { user } = useSelector((state) => state.auth);
 
+  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isSeller = user?.roles?.includes("ROLE_SELLER");
 
-const PrivateRoute = ({ publicPage = false, adminOnly = false }) => {
-    const { user } = useSelector((state) => state.auth);
-    const location = useLocation();
+  if (publicPage) {
+    return user ? <Navigate to="/" replace /> : <Outlet />;
+  }
 
-    const isAdmin = user?.roles?.includes("ROLE_ADMIN");
-    const isSeller = user?.roles?.includes("ROLE_SELLER");
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
-    // Public pages
-    if (publicPage) {
-        return user ? <Navigate to="/" replace /> : <Outlet />;
-    }
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
-    console.log("User:", user);
-    console.log("Path:", location.pathname);
+  if (sellerOnly && !isSeller && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
-    // Admin-only logic
-    if (adminOnly) {
-        if (isSeller && !isAdmin) {
-            const sellerAllowedPaths = ["/admin/orders", "/admin/products"];
-            const sellerAllowed = sellerAllowedPaths.some(path =>
-                location.pathname.startsWith(path)
-            );
-
-            if (!sellerAllowed) {
-                return <Navigate to="/" replace />;
-            }
-        }
-
-        if (!isAdmin && !isSeller) {
-            return <Navigate to="/" replace />;
-        }
-    }
-
-    // ✅ NORMAL LOGGED-IN USERS ALLOWED
-    return user ? <Outlet /> : <Navigate to="/login" replace />;
+  return <Outlet />;
 };
 
 export default PrivateRoute;

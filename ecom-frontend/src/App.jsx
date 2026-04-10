@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import './App.css'
 import Products from './components/products/Products'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
@@ -64,8 +64,7 @@ function App() {
     </Route>
   </Route>
 
-
-    <Route element={<PrivateRoute />}>
+    <Route element={<PrivateRoute sellerOnly />}>
         <Route path="/seller/orders" element={<SellerOrders />} />
         <Route path="/seller/products" element={<SellerProducts />} />
     </Route>

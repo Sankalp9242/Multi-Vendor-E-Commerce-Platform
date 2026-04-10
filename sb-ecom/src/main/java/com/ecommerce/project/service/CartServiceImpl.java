@@ -45,19 +45,12 @@ public class CartServiceImpl implements CartService{
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
 
+        validateCartItemRequest(product, quantity);
+
         CartItem cartItem = cartItemRepository.findCartItemByProductIdAndCartId(cart.getCartId(), productId);
 
         if (cartItem != null) {
             throw new APIException("Product " + product.getProductName() + " already exists in the cart");
-        }
-
-        if (product.getQuantity() == 0) {
-            throw new APIException(product.getProductName() + " is not available");
-        }
-
-        if (product.getQuantity() < quantity) {
-            throw new APIException("Please, make an order of the " + product.getProductName()
-                    + " less than or equal to the quantity " + product.getQuantity() + ".");
         }
 
         CartItem newCartItem = new CartItem();
@@ -148,15 +141,6 @@ public class CartServiceImpl implements CartService{
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
 
-        if (product.getQuantity() == 0) {
-            throw new APIException(product.getProductName() + " is not available");
-        }
-
-        if (product.getQuantity() < quantity) {
-            throw new APIException("Please, make an order of the " + product.getProductName()
-                    + " less than or equal to the quantity " + product.getQuantity() + ".");
-        }
-
         CartItem cartItem = cartItemRepository.findCartItemByProductIdAndCartId(cartId, productId);
 
         if (cartItem == null) {
@@ -169,6 +153,11 @@ public class CartServiceImpl implements CartService{
         // Validation to prevent negative quantities
         if (newQuantity < 0) {
             throw new APIException("The resulting quantity cannot be negative.");
+        }
+
+        if (newQuantity > 0 && product.getQuantity() < newQuantity) {
+            throw new APIException("Please, make an order of the " + product.getProductName()
+                    + " less than or equal to the quantity " + product.getQuantity() + ".");
         }
 
         if (newQuantity == 0){
@@ -268,6 +257,10 @@ public class CartServiceImpl implements CartService{
     @Transactional
     @Override
     public String createOrUpdateCartWithItems(List<CartItemDTO> cartItems) {
+        if (cartItems == null || cartItems.isEmpty()) {
+            throw new APIException("Cart items cannot be empty");
+        }
+
         // Get user's email
         String emailId = authUtil.loggedInEmail();
 
@@ -294,8 +287,9 @@ public class CartServiceImpl implements CartService{
             Product product = productRepository.findById(productId)
                     .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
 
+            validateCartItemRequest(product, quantity);
+
             // Directly update product stock and total price
-            // product.setQuantity(product.getQuantity() - quantity);
             totalPrice += product.getSpecialPrice() * quantity;
 
             // Create and save cart item
@@ -312,6 +306,25 @@ public class CartServiceImpl implements CartService{
         existingCart.setTotalPrice(totalPrice);
         cartRepository.save(existingCart);
         return "Cart created/updated with the new items successfully";
+    }
+
+    private void validateCartItemRequest(Product product, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new APIException("Quantity must be greater than 0");
+        }
+
+        if (product.getUser().getUserId().equals(authUtil.loggedInUserId())) {
+            throw new APIException("You cannot purchase your own product: " + product.getProductName());
+        }
+
+        if (product.getQuantity() == 0) {
+            throw new APIException(product.getProductName() + " is not available");
+        }
+
+        if (product.getQuantity() < quantity) {
+            throw new APIException("Please, make an order of the " + product.getProductName()
+                    + " less than or equal to the quantity " + product.getQuantity() + ".");
+        }
     }
 
 }

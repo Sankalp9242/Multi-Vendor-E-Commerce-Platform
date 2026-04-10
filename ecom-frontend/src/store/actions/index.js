@@ -54,11 +54,11 @@ export const fetchSellerProducts = (queryString = "") => async (dispatch) => {
 };
 
 
-export const fetchSellerOrders = () => async (dispatch) => {
-  const res = await api.get("/seller/orders");
-  dispatch({
-    type: "FETCH_SELLER_ORDERS",
-    payload: {
+export const fetchSellerOrders = (queryString = "") => async (dispatch) => {
+    const res = await api.get(`/seller/orders?${queryString}`);
+    dispatch({
+      type: "FETCH_SELLER_ORDERS",
+      payload: {
       orders: res.data.content,
       pagination: {
         pageNumber: res.data.pageNumber,
@@ -97,70 +97,50 @@ export const fetchCategories = () => async (dispatch) => {
 
 
 export const addToCart = (data, qty = 1, toast) => 
-    (dispatch, getState) => {
-        // Find the product
-        const { products } = getState().products;
-        const getProduct = products.find(
-            (item) => item.productId === data.productId
-        );
-
-        // Check for stocks
-        const isQuantityExist = getProduct.quantity >= qty;
-
-        // If in stock -> add
-        if (isQuantityExist) {
-            dispatch({ type: "ADD_CART", payload: {...data, quantity: qty}});
+    async (dispatch) => {
+        try {
+            await api.post(`/carts/products/${data.productId}/quantity/${qty}`);
+            await dispatch(getUserCart());
             toast.success(`${data?.productName} added to the cart`);
-            localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
-        } else {
-            // error
-            toast.error("Out of stock");
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Failed to add item to cart");
         }
 };
 
 
 export const increaseCartQuantity = 
     (data, toast, currentQuantity, setCurrentQuantity) =>
-    (dispatch, getState) => {
-        // Find the product
-        const { products } = getState().products;
-        
-        const getProduct = products.find(
-            (item) => item.productId === data.productId
-        );
-
-        const isQuantityExist = getProduct.quantity >= currentQuantity + 1;
-
-        if (isQuantityExist) {
+    async (dispatch) => {
+        try {
+            await api.put(`/cart/products/${data.productId}/quantity/add`);
             const newQuantity = currentQuantity + 1;
             setCurrentQuantity(newQuantity);
-
-            dispatch({
-                type: "ADD_CART",
-                payload: {...data, quantity: newQuantity + 1 },
-            });
-            localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
-        } else {
-            toast.error("Quantity Reached to Limit");
+            await dispatch(getUserCart());
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Quantity reached limit");
         }
-
     };
 
 
 
 export const decreaseCartQuantity = 
-    (data, newQuantity) => (dispatch, getState) => {
-        dispatch({
-            type: "ADD_CART",
-            payload: {...data, quantity: newQuantity},
-        });
-        localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
+    (data, newQuantity) => async (dispatch) => {
+        try {
+            await api.put(`/cart/products/${data.productId}/quantity/delete`);
+            await dispatch(getUserCart());
+        } catch (error) {
+            console.log(error);
+        }
     }
 
-export const removeFromCart =  (data, toast) => (dispatch, getState) => {
-    dispatch({type: "REMOVE_CART", payload: data });
-    toast.success(`${data.productName} removed from cart`);
-    localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
+export const removeFromCart =  (data, toast) => async (dispatch) => {
+    try {
+        await api.delete(`/carts/${data.cartId}/product/${data.productId}`);
+        await dispatch(getUserCart());
+        toast.success(`${data.productName} removed from cart`);
+    } catch (error) {
+        toast.error(error?.response?.data?.message || "Failed to remove item from cart");
+    }
 }
 
 
@@ -185,7 +165,7 @@ export const authenticateSignInUser
 
 
 export const registerNewUser 
-    = (sendData, toast, reset, navigate, setLoader) => async (dispatch) => {
+    = (sendData, toast, reset, navigate, setLoader) => async () => {
         try {
             setLoader(true);
             const { data } = await api.post("/auth/signup", sendData);
@@ -208,20 +188,20 @@ export const logOutUser = (navigate) => (dispatch) => {
 };
 
 export const addUpdateUserAddress =
-     (sendData, toast, addressId, setOpenAddressModal) => async (dispatch, getState) => {
+     (sendData, toast, addressId, setOpenAddressModal) => async (dispatch) => {
     /*
     const { user } = getState().auth;
     await api.post(`/addresses`, sendData, {
           headers: { Authorization: "Bearer " + user.jwtToken },
         });
     */
-    dispatch({ type:"BUTTON_LOADER" });
-    try {
-        if (!addressId) {
-            const { data } = await api.post("/addresses", sendData);
-        } else {
-            await api.put(`/addresses/${addressId}`, sendData);
-        }
+        dispatch({ type:"BUTTON_LOADER" });
+        try {
+            if (!addressId) {
+                await api.post("/addresses", sendData);
+            } else {
+                await api.put(`/addresses/${addressId}`, sendData);
+            }
         dispatch(getUserAddresses());
         toast.success("Address saved successfully");
         dispatch({ type:"IS_SUCCESS" });
@@ -236,7 +216,7 @@ export const addUpdateUserAddress =
 
 
 export const deleteUserAddress = 
-    (toast, addressId, setOpenDeleteModal) => async (dispatch, getState) => {
+    (toast, addressId, setOpenDeleteModal) => async (dispatch) => {
     try {
         dispatch({ type: "BUTTON_LOADER" });
         await api.delete(`/addresses/${addressId}`);
@@ -261,7 +241,7 @@ export const clearCheckoutAddress = () => {
     }
 };
 
-export const getUserAddresses = () => async (dispatch, getState) => {
+export const getUserAddresses = () => async (dispatch) => {
     try {
         dispatch({ type: "IS_FETCHING" });
         const { data } = await api.get(`/addresses`);
@@ -333,7 +313,7 @@ export const getUserCart = () => async (dispatch, getState) => {
 
 
 export const createStripePaymentSecret 
-    = (sendData) => async (dispatch, getState) => {
+    = (sendData) => async (dispatch) => {
         try {
             dispatch({ type: "IS_FETCHING" });
             const { data } = await api.post("/order/stripe-client-secret", sendData);
@@ -342,14 +322,18 @@ export const createStripePaymentSecret
               dispatch({ type: "IS_SUCCESS" });
         } catch (error) {
             console.log(error);
-            toast.error(error?.response?.data?.message || "Failed to create client secret");
+            dispatch({ 
+                type: "IS_ERROR",
+                payload: error?.response?.data?.message || "Failed to create client secret",
+             });
         }
 };
 
 
 export const stripePaymentConfirmation 
-    = (sendData, setErrorMesssage, setLoadng, toast) => async (dispatch, getState) => {
+    = (sendData, setErrorMesssage, setLoadng, toast) => async (dispatch) => {
         try {
+            setLoadng(true);
             const response  = await api.post("/order/users/payments/online", sendData);
             if (response.data) {
                 localStorage.removeItem("CHECKOUT_ADDRESS");
@@ -363,10 +347,12 @@ export const stripePaymentConfirmation
               }
         } catch (error) {
             setErrorMesssage("Payment Failed. Please try again.");
+        } finally {
+            setLoadng(false);
         }
 };
 
-export const analyticsAction = () => async (dispatch, getState) => {
+export const analyticsAction = () => async (dispatch) => {
         try {
             dispatch({ type: "IS_FETCHING"});
             const { data } = await api.get('/admin/app/analytics');
@@ -410,13 +396,17 @@ export const getOrdersForDashboard = (queryString, isAdmin) => async (dispatch) 
 
 
 export const updateOrderStatusFromDashboard =
-     (orderId, orderStatus, toast, setLoader, isAdmin) => async (dispatch, getState) => {
+     (orderId, orderStatus, toast, setLoader, isAdmin) => async (dispatch) => {
     try {
         setLoader(true);
         const endpoint = isAdmin ? "/admin/orders/" : "/seller/orders/";
         const { data } = await api.put(`${endpoint}${orderId}/status`, { status: orderStatus});
         toast.success(data.message || "Order updated successfully");
-        await dispatch(getOrdersForDashboard());
+        if (isAdmin) {
+            await dispatch(getOrdersForDashboard("", true));
+        } else {
+            await dispatch(fetchSellerOrders());
+        }
     } catch (error) {
         console.log(error);
         toast.error(error?.response?.data?.message || "Internal Server Error");
@@ -459,19 +449,23 @@ export const updateProductFromDashboard =
         await api.put(`${endpoint}${sendData.id}`, sendData);
         toast.success("Product update successful");
         reset();
-        setLoader(false);
         setOpen(false);
-        await dispatch(dashboardProductsAction());
+        if (isAdmin) {
+            await dispatch(dashboardProductsAction("", true));
+        } else {
+            await dispatch(fetchSellerProducts());
+        }
     } catch (error) {
-        toast.error(error?.response?.data?.description || "Product update failed");
-     
+        toast.error(error?.response?.data?.message || "Product update failed");
+    } finally {
+        setLoader(false);
     }
 };
 
 
 
 export const addNewProductFromDashboard = 
-    (sendData, toast, reset, setLoader, setOpen, isAdmin) => async(dispatch, getState) => {
+    (sendData, toast, reset, setLoader, setOpen, isAdmin) => async(dispatch) => {
         try {
             setLoader(true);
             const endpoint = isAdmin ? "/admin/categories/" : "/seller/categories/";
@@ -481,30 +475,39 @@ export const addNewProductFromDashboard =
             toast.success("Product created successfully");
             reset();
             setOpen(false);
-            await dispatch(dashboardProductsAction());
+            if (isAdmin) {
+                await dispatch(dashboardProductsAction("", true));
+            } else {
+                await dispatch(fetchSellerProducts());
+            }
         } catch (error) {
-            console.error(err);
-            toast.error(err?.response?.data?.description || "Product creation failed");
+            console.error(error);
+            toast.error(error?.response?.data?.message || "Product creation failed");
         } finally {
             setLoader(false);
         }
     }
 
 export const deleteProduct = 
-    (setLoader, productId, toast, setOpenDeleteModal, isAdmin) => async (dispatch, getState) => {
+    (setLoader, productId, toast, setOpenDeleteModal, isAdmin) => async (dispatch) => {
     try {
         setLoader(true)
         const endpoint = isAdmin ? "/admin/products/" : "/seller/products/";
         await api.delete(`${endpoint}${productId}`);
         toast.success("Product deleted successfully");
-        setLoader(false);
         setOpenDeleteModal(false);
-        await dispatch(dashboardProductsAction());
+        if (isAdmin) {
+            await dispatch(dashboardProductsAction("", true));
+        } else {
+            await dispatch(fetchSellerProducts());
+        }
     } catch (error) {
         console.log(error);
         toast.error(
             error?.response?.data?.message || "Some Error Occured"
         )
+    } finally {
+        setLoader(false);
     }
 };
 
@@ -516,12 +519,16 @@ export const updateProductImageFromDashboard =
         const endpoint = isAdmin ? "/admin/products/" : "/seller/products/";
         await api.put(`${endpoint}${productId}/image`, formData);
         toast.success("Image upload successful");
-        setLoader(false);
         setOpen(false);
-        await dispatch(dashboardProductsAction());
+        if (isAdmin) {
+            await dispatch(dashboardProductsAction("", true));
+        } else {
+            await dispatch(fetchSellerProducts());
+        }
     } catch (error) {
-        toast.error(error?.response?.data?.description || "Product Image upload failed");
-     
+        toast.error(error?.response?.data?.message || "Product Image upload failed");
+    } finally {
+        setLoader(false);
     }
 };
 

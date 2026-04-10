@@ -30,10 +30,7 @@ const useProductFilter = () => {
             params.set("keyword", keyword);
         }
 
-        const queryString = params.toString();
-        console.log("QUERY STRING", queryString);
-        
-        dispatch(fetchProducts(queryString));
+        dispatch(fetchProducts(params.toString()));
 
     }, [dispatch, searchParams]);
 };
@@ -59,7 +56,7 @@ export const useDashboardProductFilter = () => {
         const queryString = params.toString();
         dispatch(dashboardProductsAction(queryString, isAdmin));
 
-    }, [dispatch, searchParams]);
+    }, [dispatch, searchParams, isAdmin]);
 };
 
 export default useProductFilter;

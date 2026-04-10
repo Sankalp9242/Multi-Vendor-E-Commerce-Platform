@@ -61,6 +61,7 @@ const ItemContent = ({
                 <div className="flex items-start gap-5 mt-3">
                     <button
                         onClick={() => removeItemFromCart({
+                            cartId,
                             image,
                             productName,
                             description,
@@ -86,6 +87,7 @@ const ItemContent = ({
                     quantity={currentQuantity}
                     cardCounter={true}
                     handeQtyIncrease={() => handleQtyIncrease({
+                        cartId,
                         image,
                         productName,
                         description,
@@ -95,6 +97,7 @@ const ItemContent = ({
                         quantity,
                     })}
                     handleQtyDecrease={() => {handleQtyDecrease({
+                        cartId,
                         image,
                         productName,
                         description,

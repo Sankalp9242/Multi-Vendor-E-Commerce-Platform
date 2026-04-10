@@ -1,17 +1,25 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { FaShoppingCart } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
 import OrderTable from "../../admin/orders/OrderTable";
 import { fetchSellerOrders } from "../../../store/actions";
+import { useSearchParams } from "react-router-dom";
 
 
 const SellerOrders = () => {
   const dispatch = useDispatch();
   const { orders, pagination } = useSelector(state => state.sellerOrders);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    dispatch(fetchSellerOrders());
-  }, []);
+    const params = new URLSearchParams();
+    const currentPage = searchParams.get("page")
+      ? Number(searchParams.get("page"))
+      : 1;
+
+    params.set("pageNumber", currentPage - 1);
+    dispatch(fetchSellerOrders(params.toString()));
+  }, [dispatch, searchParams]);
 
   const emptyOrder = !orders || orders.length === 0;
 

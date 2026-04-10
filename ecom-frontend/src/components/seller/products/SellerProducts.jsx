@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { MdAddShoppingCart } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import Loader from "../../shared/Loader";
@@ -14,7 +14,6 @@ import AddProductForm from "../../admin/products/AddProductForm";
 import ImageUploadForm from "../../admin/products/ImageUploadForm";
 import ProductViewModal from "../../shared/ProductViewModal";
 import { deleteProduct } from "../../../store/actions";
-import { useDashboardProductFilter } from "../../../hooks/useProductFilter";
 import useSellerProductFilter from "../../../hooks/useSellerProductFilter";
 
 const SellerProducts = () => {
@@ -24,10 +23,6 @@ const SellerProducts = () => {
 
   const { isLoading } = useSelector((state) => state.errors);
   const dispatch = useDispatch();
-
-  const [currentPage, setCurrentPage] = useState(
-    pagination?.pageNumber + 1 || 1
-  );
 
   const [selectedProduct, setSelectedProduct] = useState("");
   const [openUpdateModal, setOpenUpdateModal] = useState(false);
@@ -43,7 +38,27 @@ const SellerProducts = () => {
   const params = new URLSearchParams(searchParams);
   const pathname = useLocation().pathname;
 
-  // 🔑 IMPORTANT: use SELLER filter
+const handleEdit = (product) => {
+  setSelectedProduct(product);
+  setOpenUpdateModal(true);
+};
+
+const handleDelete = (product) => {
+  setSelectedProduct(product);
+  setOpenDeleteModal(true);
+};
+
+const handleImageUpload = (product) => {
+  setSelectedProduct(product);
+  setOpenImageUploadModal(true);
+};
+
+const handleProductView = (product) => {
+  setSelectedProduct(product);
+  setOpenProductViewModal(true);
+};
+
+  //  IMPORTANT: use SELLER filter
 useSellerProductFilter();
  // we’ll adjust hook
 
@@ -60,7 +75,6 @@ useSellerProductFilter();
 
   const handlePaginationChange = (paginationModel) => {
     const page = paginationModel.page + 1;
-    setCurrentPage(page);
     params.set("page", page.toString());
     navigate(`${pathname}?${params}`);
   };
@@ -91,14 +105,13 @@ useSellerProductFilter();
         </div>
       ) : (
         <DataGrid
-          rows={tableRecords}
-          columns={adminProductTableColumn(
-            setSelectedProduct,
-            setOpenUpdateModal,
-            setOpenDeleteModal,
-            setOpenImageUploadModal,
-            setOpenProductViewModal
-          )}
+                  rows={tableRecords}
+                  columns={adminProductTableColumn(
+                     handleEdit,
+                     handleDelete,
+                     handleImageUpload,
+                     handleProductView
+        )}
           paginationMode="server"
           rowCount={pagination?.totalElements || 0}
           onPaginationModelChange={handlePaginationChange}
@@ -106,9 +119,11 @@ useSellerProductFilter();
       )}
 
       {/* MODALS */}
-      <Modal open={openAddModal || openUpdateModal} setOpen={setOpenAddModal}>
+      <Modal
+        open={openAddModal || openUpdateModal}
+        setOpen={openUpdateModal ? setOpenUpdateModal : setOpenAddModal}>
         <AddProductForm
-          setOpen={setOpenAddModal}
+          setOpen={openUpdateModal ? setOpenUpdateModal : setOpenAddModal}
           product={selectedProduct}
           update={openUpdateModal}
         />
