@@ -31,7 +31,12 @@ const SellerOrders = () => {
           <h2 className="text-2xl font-semibold">No Orders Yet</h2>
         </div>
       ) : (
-        <OrderTable adminOrder={orders} pagination={pagination} />
+        <OrderTable
+          adminOrder={orders}
+          pagination={pagination}
+          title="Seller Orders"
+          showDetails
+        />
       )}
     </div>
   );

@@ -148,7 +148,7 @@ export const adminProductTableColumn = (
 ];
 
 
-export const adminOrderTableColumn = (handleEdit) => [
+export const adminOrderTableColumn = (handleEdit, handleView) => [
   { 
     sortable: false,
     disableColumnMenu: true,
@@ -226,7 +226,7 @@ export const adminOrderTableColumn = (handleEdit) => [
     headerClassName: "text-black font-semibold text-center",
     cellClassName: "text-slate-700 font-normal",
     sortable: false,
-    width: 250,
+    width: handleView ? 360 : 250,
     renderHeader: (params) => <span>Action</span>,
     renderCell: (params) => {
       return (
@@ -237,6 +237,14 @@ export const adminOrderTableColumn = (handleEdit) => [
               <FaEdit className='mr-2'/>
               Edit
           </button>
+          {handleView && (
+            <button
+              onClick={() => handleView(params.row)}
+              className='flex items-center bg-slate-800 text-white px-4 h-9 rounded-md'>
+                <FaEye className='mr-2'/>
+                View
+            </button>
+          )}
         </div>
       );
     },

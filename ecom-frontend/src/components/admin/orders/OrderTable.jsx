@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import Modal from '../../shared/Modal';
 import UpdateOrderForm from './UpdateOrderForm';
+import SellerOrderDetails from '../../seller/orders/SellerOrderDetails';
 
-const OrderTable = ({ adminOrder, pagination}) => {
+const OrderTable = ({ adminOrder, pagination, title = "All Orders", showDetails = false }) => {
   const [updateOpenModal, setUpdateOpenModal] = useState(false);
+  const [detailsOpenModal, setDetailsOpenModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState("");
   const [loader, setLoader] = useState(false);
   const navigate = useNavigate();
@@ -25,6 +27,9 @@ const tableRecords = adminOrder?.map((item) => {
     totalAmount: item.totalAmount,
     status: item.orderStatus,
     date: item.orderDate,
+    payment: item.payment,
+    orderItems: item.orderItems,
+    addressId: item.addressId,
   }
 });
 
@@ -40,17 +45,22 @@ const handleEdit = (order) => {
   setUpdateOpenModal(true);
 }
 
+const handleView = (order) => {
+  setSelectedItem(order);
+  setDetailsOpenModal(true);
+}
+
   return (
     <div>
       <h1 className='text-slate-800 text-3xl text-center font-bold pb-6 uppercase'>
-        All Orders
+        {title}
       </h1>
 
       <div>
          <DataGrid
          className='w-full'
             rows={tableRecords}
-            columns={adminOrderTableColumn(handleEdit)}
+            columns={adminOrderTableColumn(handleEdit, showDetails ? handleView : null)}
             paginationMode='server'
             rowCount={pagination?.totalElements || 0}
             initialState={{
@@ -87,6 +97,15 @@ const handleEdit = (order) => {
             selectedItem={selectedItem}
             />
       </Modal>
+
+      {showDetails && (
+        <Modal
+          open={detailsOpenModal}
+          setOpen={setDetailsOpenModal}
+          title='Order Details'>
+            <SellerOrderDetails order={selectedItem} />
+        </Modal>
+      )}
     </div>
   )
 }
