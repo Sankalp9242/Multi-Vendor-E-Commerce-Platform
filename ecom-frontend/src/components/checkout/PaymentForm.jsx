@@ -1,6 +1,5 @@
 import { Skeleton } from '@mui/material';
 import { PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
-import React from 'react'
 import { useState } from 'react';
 
 const PaymentForm = ({ clientSecret, totalPrice }) => {
@@ -15,6 +14,10 @@ const PaymentForm = ({ clientSecret, totalPrice }) => {
         }
 
         const { error: submitError } = await elements.submit();
+        if (submitError) {
+            setErrorMessage(submitError.message || "Unable to submit payment details");
+            return false;
+        }
 
         const { error } = await stripe.confirmPayment({
             elements,
@@ -49,6 +52,7 @@ const PaymentForm = ({ clientSecret, totalPrice }) => {
             )}
 
             <button
+                type="submit"
                 className='text-white w-full px-5 py-[10px] bg-black mt-2 rounded-md font-bold disabled:opacity-50 disabled:animate-pulse'
                 disabled={!stripe || isLoading}>
                     {!isLoading ? `Pay $${Number(totalPrice).toFixed(2)}`

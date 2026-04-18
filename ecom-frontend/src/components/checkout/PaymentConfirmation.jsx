@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { FaCheckCircle } from 'react-icons/fa';
-import { useDispatch, useSelector } from 'react-redux';
-import { useLocation } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { stripePaymentConfirmation } from '../../store/actions';
-import Skeleton from '../shared/Skeleton';
+import { useEffect, useRef, useState } from "react";
+import { FaCheckCircle } from "react-icons/fa";
+import { useDispatch, useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
+import toast from "react-hot-toast";
+import { stripePaymentConfirmation } from "../../store/actions";
+import Skeleton from "../shared/Skeleton";
 
 const PaymentConfirmation = () => {
   const location = useLocation();
@@ -12,6 +12,7 @@ const PaymentConfirmation = () => {
   const dispatch = useDispatch();
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const hasSubmittedRef = useRef(false);
   const { cart } = useSelector((state) => state.carts);
 
   const paymentIntent = searchParams.get("payment_intent");
@@ -20,45 +21,68 @@ const PaymentConfirmation = () => {
   const selectedUserCheckoutAddress = localStorage.getItem("CHECKOUT_ADDRESS")
     ? JSON.parse(localStorage.getItem("CHECKOUT_ADDRESS"))
     : null;
+  const processedPaymentIntent = paymentIntent
+    ? sessionStorage.getItem(`processed-payment:${paymentIntent}`)
+    : null;
 
   useEffect(() => {
     if (
-      paymentIntent &&
-      clientSecret &&
-      redirectStatus === "succeeded" &&
-      selectedUserCheckoutAddress?.addressId &&
-      cart?.length > 0
+      hasSubmittedRef.current ||
+      !paymentIntent ||
+      !clientSecret ||
+      redirectStatus !== "succeeded" ||
+      !selectedUserCheckoutAddress?.addressId ||
+      !cart?.length ||
+      processedPaymentIntent
     ) {
-      const sendData = {
-        addressId: selectedUserCheckoutAddress.addressId,
-        pgName: "Stripe",
-        pgPaymentId: paymentIntent,
-        pgStatus: "succeeded",
-        pgResponseMessage: "Payment successful",
-      };
-
-      dispatch(stripePaymentConfirmation(sendData, setErrorMessage, setLoading, toast));
+      return;
     }
-  }, [paymentIntent, clientSecret, redirectStatus, selectedUserCheckoutAddress, cart, dispatch]);
+
+    hasSubmittedRef.current = true;
+
+    const sendData = {
+      addressId: selectedUserCheckoutAddress.addressId,
+      pgName: "Stripe",
+      pgPaymentId: paymentIntent,
+      pgStatus: "succeeded",
+      pgResponseMessage: "Payment successful",
+    };
+
+    dispatch(
+      stripePaymentConfirmation(
+        sendData,
+        setErrorMessage,
+        setLoading,
+        toast,
+        () => sessionStorage.setItem(`processed-payment:${paymentIntent}`, "true")
+      )
+    );
+  }, [
+    paymentIntent,
+    clientSecret,
+    redirectStatus,
+    selectedUserCheckoutAddress,
+    cart,
+    processedPaymentIntent,
+    dispatch,
+  ]);
 
   return (
-    <div className='min-h-screen flex items-center justify-center'>
+    <div className="flex min-h-screen items-center justify-center">
       {loading ? (
-        <div className='max-w-xl mx-auto'>
+        <div className="mx-auto max-w-xl">
           <Skeleton />
         </div>
       ) : (
-        <div className="p-8 rounded-lg shadow-lg text-center max-w-md mx-auto border border-gray-200">
-          <div className="text-green-500 mb-4 flex justify-center">
+        <div className="mx-auto max-w-md rounded-lg border border-gray-200 p-8 text-center shadow-lg">
+          <div className="mb-4 flex justify-center text-green-500">
             <FaCheckCircle size={64} />
           </div>
-          <h2 className='text-3xl font-bold text-gray-800 mb-2'>Payment Successful!</h2>
-          <p className="text-gray-600 mb-6">
-            Thank you for your purchase! Your payment was successful, and we're processing your order.
+          <h2 className="mb-2 text-3xl font-bold text-gray-800">Payment Successful!</h2>
+          <p className="mb-6 text-gray-600">
+            Thank you for your purchase! Your payment was successful, and we are processing your order.
           </p>
-          {errorMessage && (
-            <p className='text-red-600 font-medium'>{errorMessage}</p>
-          )}
+          {errorMessage && <p className="font-medium text-red-600">{errorMessage}</p>}
         </div>
       )}
     </div>

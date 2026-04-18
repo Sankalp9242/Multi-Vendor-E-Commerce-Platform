@@ -146,8 +146,11 @@ public class OrderServiceImpl implements OrderService {
             Product product = item.getProduct();
             product.setQuantity(product.getQuantity() - quantity);
             productRepository.save(product);
-            cartService.deleteProductFromCart(cart.getCartId(), product.getProductId());
         }
+
+        cart.getCartItems().clear();
+        cart.setTotalPrice(0.0);
+        cartRepository.save(cart);
 
         return mapOrderToDto(savedOrder, null);
     }

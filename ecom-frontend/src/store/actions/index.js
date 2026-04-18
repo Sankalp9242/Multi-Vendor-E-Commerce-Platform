@@ -366,7 +366,7 @@ export const createStripePaymentSecret
 
 
 export const stripePaymentConfirmation 
-    = (sendData, setErrorMesssage, setLoadng, toast) => async (dispatch) => {
+    = (sendData, setErrorMesssage, setLoadng, toast, onSuccess) => async (dispatch) => {
         try {
             setLoadng(true);
             const response  = await api.post("/order/users/payments/online", sendData);
@@ -376,12 +376,16 @@ export const stripePaymentConfirmation
                 localStorage.removeItem("client-secret");
                 dispatch({ type: "REMOVE_CLIENT_SECRET_ADDRESS"});
                 dispatch({ type: "CLEAR_CART"});
+                await dispatch(getUserCart());
+                if (onSuccess) {
+                    onSuccess();
+                }
                 toast.success("Order Accepted");
               } else {
                 setErrorMesssage("Payment Failed. Please try again.");
               }
         } catch (error) {
-            setErrorMesssage("Payment Failed. Please try again.");
+            setErrorMesssage(error?.response?.data?.message || "Payment Failed. Please try again.");
         } finally {
             setLoadng(false);
         }
