@@ -338,8 +338,15 @@ export const getUserCart = () => async (dispatch, getState) => {
         localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
         dispatch({ type: "IS_SUCCESS" });
     } catch (error) {
+        const statusCode = error?.response?.status;
+        if (statusCode === 404) {
+            dispatch({ type: "CLEAR_CART" });
+            localStorage.setItem("cartItems", JSON.stringify([]));
+            dispatch({ type: "IS_SUCCESS" });
+            return;
+        }
         console.log(error);
-        dispatch({ 
+        dispatch({
             type: "IS_ERROR",
             payload: error?.response?.data?.message || "Failed to fetch cart items",
          });

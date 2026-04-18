@@ -17,6 +17,7 @@ import com.ecommerce.project.payload.OrderResponse;
 import com.ecommerce.project.payload.PaymentDTO;
 import com.ecommerce.project.payload.ProductDTO;
 import com.ecommerce.project.repositories.AddressRepository;
+import com.ecommerce.project.repositories.CartItemRepository;
 import com.ecommerce.project.repositories.CartRepository;
 import com.ecommerce.project.repositories.OrderItemRepository;
 import com.ecommerce.project.repositories.OrderRepository;
@@ -54,6 +55,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     CartRepository cartRepository;
+
+    @Autowired
+    CartItemRepository cartItemRepository;
 
     @Autowired
     AddressRepository addressRepository;
@@ -148,6 +152,7 @@ public class OrderServiceImpl implements OrderService {
             productRepository.save(product);
         }
 
+        cartItemRepository.deleteAllByCartId(cart.getCartId());
         cart.getCartItems().clear();
         cart.setTotalPrice(0.0);
         cartRepository.save(cart);
