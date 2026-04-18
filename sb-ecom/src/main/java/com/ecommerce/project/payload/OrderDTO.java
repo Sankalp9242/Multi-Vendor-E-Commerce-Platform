@@ -19,4 +19,7 @@ public class OrderDTO {
     private Double totalAmount;
     private String orderStatus;
     private Long addressId;
+    private String carrierName;
+    private String trackingNumber;
+    private LocalDate estimatedDeliveryDate;
 }

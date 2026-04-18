@@ -30,6 +30,9 @@ const tableRecords = adminOrder?.map((item) => {
     payment: item.payment,
     orderItems: item.orderItems,
     addressId: item.addressId,
+    carrierName: item.carrierName,
+    trackingNumber: item.trackingNumber,
+    estimatedDeliveryDate: item.estimatedDeliveryDate,
   }
 });
 

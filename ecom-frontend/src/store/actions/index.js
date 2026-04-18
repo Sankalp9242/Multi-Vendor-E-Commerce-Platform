@@ -23,6 +23,32 @@ export const fetchProducts = (queryString) => async (dispatch) => {
     }
 };
 
+export const fetchProductReviews = (productId) => async (dispatch) => {
+    try {
+        const { data } = await api.get(`/public/products/${productId}/reviews`);
+        dispatch({
+            type: "FETCH_PRODUCT_REVIEWS",
+            payload: data,
+        });
+    } catch (error) {
+        dispatch({
+            type: "FETCH_PRODUCT_REVIEWS",
+            payload: [],
+        });
+    }
+};
+
+export const submitProductReview = (productId, sendData, toast) => async (dispatch) => {
+    try {
+        await api.post(`/products/${productId}/reviews`, sendData);
+        toast.success("Review submitted successfully");
+        await dispatch(fetchProductReviews(productId));
+        await dispatch(fetchProducts("pageNumber=0"));
+    } catch (error) {
+        toast.error(error?.response?.data?.message || "Failed to submit review");
+    }
+};
+
 
 export const fetchSellerProducts = (queryString = "") => async (dispatch) => {
   try {
@@ -55,19 +81,28 @@ export const fetchSellerProducts = (queryString = "") => async (dispatch) => {
 
 
 export const fetchSellerOrders = (queryString = "") => async (dispatch) => {
-    const res = await api.get(`/seller/orders?${queryString}`);
-    dispatch({
-      type: "FETCH_SELLER_ORDERS",
-      payload: {
-      orders: res.data.content,
-      pagination: {
-        pageNumber: res.data.pageNumber,
-        pageSize: res.data.pageSize,
-        totalElements: res.data.totalElements,
-        totalPages: res.data.totalPages,
-      },
-    },
-  });
+    try {
+        dispatch({ type: "IS_FETCHING" });
+        const res = await api.get(`/seller/orders?${queryString}`);
+        dispatch({
+          type: "FETCH_SELLER_ORDERS",
+          payload: {
+          orders: res.data.content,
+          pagination: {
+            pageNumber: res.data.pageNumber,
+            pageSize: res.data.pageSize,
+            totalElements: res.data.totalElements,
+            totalPages: res.data.totalPages,
+          },
+        },
+      });
+        dispatch({ type: "IS_SUCCESS" });
+    } catch (error) {
+        dispatch({
+            type: "IS_ERROR",
+            payload: error?.response?.data?.message || "Failed to fetch seller orders",
+        });
+    }
 };
 
 
@@ -85,7 +120,7 @@ export const fetchCategories = () => async (dispatch) => {
             totalPages: data.totalPages,
             lastPage: data.lastPage,
         });
-        dispatch({ type: "IS_ERROR" });
+        dispatch({ type: "CATEGORY_SUCCESS" });
     } catch (error) {
         console.log(error);
         dispatch({ 
@@ -352,12 +387,13 @@ export const stripePaymentConfirmation
         }
 };
 
-export const analyticsAction = () => async (dispatch) => {
+export const analyticsAction = (isAdmin = true) => async (dispatch) => {
         try {
             dispatch({ type: "IS_FETCHING"});
-            const { data } = await api.get('/admin/app/analytics');
+            const endpoint = isAdmin ? "/admin/app/analytics" : "/seller/app/analytics";
+            const { data } = await api.get(endpoint);
             dispatch({
-                type: "FETCH_ANALYTICS",
+                type: isAdmin ? "FETCH_ANALYTICS" : "FETCH_SELLER_ANALYTICS",
                 payload: data,
             })
             dispatch({ type: "IS_SUCCESS"});
@@ -396,11 +432,11 @@ export const getOrdersForDashboard = (queryString, isAdmin) => async (dispatch) 
 
 
 export const updateOrderStatusFromDashboard =
-     (orderId, orderStatus, toast, setLoader, isAdmin) => async (dispatch) => {
+     (orderId, orderStatusData, toast, setLoader, isAdmin) => async (dispatch) => {
     try {
         setLoader(true);
         const endpoint = isAdmin ? "/admin/orders/" : "/seller/orders/";
-        const { data } = await api.put(`${endpoint}${orderId}/status`, { status: orderStatus});
+        const { data } = await api.put(`${endpoint}${orderId}/status`, orderStatusData);
         toast.success(data.message || "Order updated successfully");
         if (isAdmin) {
             await dispatch(getOrdersForDashboard("", true));

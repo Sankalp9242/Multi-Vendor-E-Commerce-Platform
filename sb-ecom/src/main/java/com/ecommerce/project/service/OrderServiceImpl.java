@@ -23,6 +23,8 @@ import com.ecommerce.project.repositories.OrderRepository;
 import com.ecommerce.project.repositories.PaymentRepository;
 import com.ecommerce.project.repositories.ProductRepository;
 import com.ecommerce.project.util.AuthUtil;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,6 +79,9 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     AuthUtil authUtil;
 
+    @Autowired
+    StripeService stripeService;
+
     @Override
     @Transactional
     public OrderDTO placeOrder(String emailId, Long addressId, String paymentMethod, String pgName, String pgPaymentId, String pgStatus, String pgResponseMessage) {
@@ -93,6 +98,12 @@ public class OrderServiceImpl implements OrderService {
         Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "addressId", addressId));
 
+        if (address.getUser() == null || !address.getUser().getEmail().equals(emailId)) {
+            throw new APIException("Address does not belong to the logged-in user");
+        }
+
+        PaymentVerificationResult paymentVerification = verifyPayment(cart, paymentMethod, pgName, pgPaymentId);
+
         Order order = new Order();
         order.setEmail(emailId);
         order.setOrderDate(LocalDate.now());
@@ -100,7 +111,13 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderStatus(AppConstants.ORDER_STATUS_PENDING);
         order.setAddress(address);
 
-        Payment payment = new Payment(paymentMethod, pgPaymentId, pgStatus, pgResponseMessage, pgName);
+        Payment payment = new Payment(
+                paymentMethod,
+                paymentVerification.paymentId(),
+                paymentVerification.paymentStatus(),
+                paymentVerification.responseMessage(),
+                paymentVerification.gatewayName()
+        );
         payment.setOrder(order);
         payment = paymentRepository.save(payment);
         order.setPayment(payment);
@@ -148,16 +165,57 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderDTO updateOrder(Long orderId, String status) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
-        String normalizedCurrentStatus = normalizeOrderStatus(order.getOrderStatus());
-        String normalizedNextStatus = normalizeOrderStatus(status);
+        return updateOrder(orderId, status, null, null, null);
+    }
 
-        validateOrderStatusTransition(normalizedCurrentStatus, normalizedNextStatus);
+    @Override
+    public OrderDTO updateOrder(Long orderId, String status, String carrierName, String trackingNumber, LocalDate estimatedDeliveryDate) {
+        return updateOrderInternal(orderId, status, null, carrierName, trackingNumber, estimatedDeliveryDate);
+    }
 
-        order.setOrderStatus(normalizedNextStatus);
-        orderRepository.save(order);
-        return mapOrderToDto(order, null);
+    @Override
+    public OrderDTO updateOrderForSeller(Long orderId, String status, Long sellerId) {
+        return updateOrderForSeller(orderId, status, sellerId, null, null, null);
+    }
+
+    @Override
+    public OrderDTO updateOrderForSeller(Long orderId, String status, Long sellerId, String carrierName, String trackingNumber, LocalDate estimatedDeliveryDate) {
+        if (!orderRepository.existsOrderForSeller(orderId, sellerId)) {
+            throw new APIException("You are not authorized to update this order");
+        }
+
+        return updateOrderInternal(orderId, status, sellerId, carrierName, trackingNumber, estimatedDeliveryDate);
+    }
+
+    @Override
+    @Transactional
+    public void syncStripePaymentStatus(String paymentIntentId, String paymentStatus, String responseMessage) {
+        paymentRepository.findByPgPaymentId(paymentIntentId).ifPresent(payment -> {
+            payment.setPgStatus(paymentStatus);
+            payment.setPgResponseMessage(responseMessage);
+            paymentRepository.save(payment);
+
+            Order order = payment.getOrder();
+            if (order == null) {
+                return;
+            }
+
+            String normalizedPaymentStatus = paymentStatus == null
+                    ? ""
+                    : paymentStatus.trim().toLowerCase(Locale.ROOT);
+
+            if ("succeeded".equals(normalizedPaymentStatus)
+                    && AppConstants.ORDER_STATUS_PENDING.equals(normalizeOrderStatus(order.getOrderStatus()))) {
+                order.setOrderStatus(AppConstants.ORDER_STATUS_CONFIRMED);
+                orderRepository.save(order);
+            }
+
+            if (("canceled".equals(normalizedPaymentStatus) || "failed".equals(normalizedPaymentStatus))
+                    && !AppConstants.ORDER_STATUS_DELIVERED.equals(normalizeOrderStatus(order.getOrderStatus()))) {
+                order.setOrderStatus(AppConstants.ORDER_STATUS_CANCELLED);
+                orderRepository.save(order);
+            }
+        });
     }
 
     @Override
@@ -200,6 +258,58 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    private OrderDTO updateOrderInternal(Long orderId, String status, Long sellerId,
+                                         String carrierName, String trackingNumber, LocalDate estimatedDeliveryDate) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderId", orderId));
+        String normalizedCurrentStatus = normalizeOrderStatus(order.getOrderStatus());
+        String normalizedNextStatus = normalizeOrderStatus(status);
+
+        validateOrderStatusTransition(normalizedCurrentStatus, normalizedNextStatus);
+        applyShippingDetails(order, normalizedNextStatus, carrierName, trackingNumber, estimatedDeliveryDate);
+
+        order.setOrderStatus(normalizedNextStatus);
+        orderRepository.save(order);
+        return mapOrderToDto(order, sellerId);
+    }
+
+    private PaymentVerificationResult verifyPayment(Cart cart, String paymentMethod, String pgName, String pgPaymentId) {
+        if (!"online".equalsIgnoreCase(paymentMethod) && !"stripe".equalsIgnoreCase(paymentMethod)) {
+            return new PaymentVerificationResult(
+                    pgName != null && !pgName.isBlank() ? pgName : paymentMethod,
+                    pgPaymentId,
+                    "PENDING",
+                    "Payment verification skipped for non-Stripe flow"
+            );
+        }
+
+        if (pgPaymentId == null || pgPaymentId.isBlank()) {
+            throw new APIException("Stripe payment ID is required");
+        }
+
+        try {
+            PaymentIntent paymentIntent = stripeService.retrievePaymentIntent(pgPaymentId);
+            Long expectedAmount = Math.round(cart.getTotalPrice() * 100);
+
+            if (!"succeeded".equalsIgnoreCase(paymentIntent.getStatus())) {
+                throw new APIException("Stripe payment is not successful");
+            }
+
+            if (!expectedAmount.equals(paymentIntent.getAmount())) {
+                throw new APIException("Stripe payment amount does not match cart total");
+            }
+
+            return new PaymentVerificationResult(
+                    "Stripe",
+                    paymentIntent.getId(),
+                    paymentIntent.getStatus(),
+                    "Payment verified with Stripe"
+            );
+        } catch (StripeException e) {
+            throw new APIException("Unable to verify Stripe payment");
+        }
+    }
+
     private OrderResponse buildOrderResponse(Page<Order> pageOrders, Long sellerId) {
         List<OrderDTO> orderDTOs = pageOrders.getContent().stream()
                 .map(order -> mapOrderToDto(order, sellerId))
@@ -230,6 +340,12 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
 
         orderDTO.setOrderItems(orderItemDTOs);
+        if (sellerId != null) {
+            double sellerTotal = orderItemDTOs.stream()
+                    .mapToDouble(orderItemDTO -> orderItemDTO.getOrderedProductPrice() * orderItemDTO.getQuantity())
+                    .sum();
+            orderDTO.setTotalAmount(sellerTotal);
+        }
 
         if (order.getPayment() != null) {
             orderDTO.setPayment(modelMapper.map(order.getPayment(), PaymentDTO.class));
@@ -239,7 +355,41 @@ public class OrderServiceImpl implements OrderService {
             orderDTO.setAddressId(order.getAddress().getAddressId());
         }
 
+        orderDTO.setCarrierName(order.getCarrierName());
+        orderDTO.setTrackingNumber(order.getTrackingNumber());
+        orderDTO.setEstimatedDeliveryDate(order.getEstimatedDeliveryDate());
+
         return orderDTO;
+    }
+
+    private void applyShippingDetails(Order order, String nextStatus, String carrierName,
+                                      String trackingNumber, LocalDate estimatedDeliveryDate) {
+        boolean requiresShippingInfo = AppConstants.ORDER_STATUS_SHIPPED.equals(nextStatus)
+                || AppConstants.ORDER_STATUS_DELIVERED.equals(nextStatus);
+
+        String resolvedCarrierName = hasText(carrierName) ? carrierName.trim() : order.getCarrierName();
+        String resolvedTrackingNumber = hasText(trackingNumber) ? trackingNumber.trim() : order.getTrackingNumber();
+        LocalDate resolvedEstimatedDeliveryDate = estimatedDeliveryDate != null
+                ? estimatedDeliveryDate
+                : order.getEstimatedDeliveryDate();
+
+        if (requiresShippingInfo) {
+            if (!hasText(resolvedCarrierName)) {
+                throw new APIException("Carrier name is required for shipped or delivered orders");
+            }
+
+            if (!hasText(resolvedTrackingNumber)) {
+                throw new APIException("Tracking number is required for shipped or delivered orders");
+            }
+        }
+
+        order.setCarrierName(resolvedCarrierName);
+        order.setTrackingNumber(resolvedTrackingNumber);
+        order.setEstimatedDeliveryDate(resolvedEstimatedDeliveryDate);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private String normalizeOrderStatus(String status) {
@@ -284,5 +434,13 @@ public class OrderServiceImpl implements OrderService {
                     + currentStatus + " to " + nextStatus
                     + ". Allowed next statuses: " + displayStatuses);
         }
+    }
+
+    private record PaymentVerificationResult(
+            String gatewayName,
+            String paymentId,
+            String paymentStatus,
+            String responseMessage
+    ) {
     }
 }

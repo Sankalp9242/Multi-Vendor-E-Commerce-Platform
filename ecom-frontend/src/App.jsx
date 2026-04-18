@@ -21,6 +21,7 @@ import Category from './components/admin/categories/Category'
 import Orders from './components/admin/orders/Orders'
 import UserOrders from "./components/profile/UserOrders";
 import UserProfile from "./components/user/UserProfile";
+import SellerDashboard from './components/seller/dashboard/SellerDashboard';
 import SellerOrders from './components/seller/orders/SellerOrders';
 import SellerProducts from './components/seller/products/SellerProducts';
 
@@ -65,8 +66,11 @@ function App() {
   </Route>
 
     <Route element={<PrivateRoute sellerOnly />}>
-        <Route path="/seller/orders" element={<SellerOrders />} />
-        <Route path="/seller/products" element={<SellerProducts />} />
+        <Route path="/seller" element={<AdminLayout />}>
+          <Route index element={<SellerDashboard />} />
+          <Route path="products" element={<SellerProducts />} />
+          <Route path="orders" element={<SellerOrders />} />
+        </Route>
     </Route>
 
 

@@ -12,6 +12,7 @@ import com.ecommerce.project.payload.ProductResponse;
 import com.ecommerce.project.repositories.CartRepository;
 import com.ecommerce.project.repositories.CategoryRepository;
 import com.ecommerce.project.repositories.ProductRepository;
+import com.ecommerce.project.repositories.ReviewRepository;
 import com.ecommerce.project.util.AuthUtil;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     @Autowired
     private ModelMapper modelMapper;
@@ -112,9 +116,7 @@ public class ProductServiceImpl implements ProductService {
 
         List<ProductDTO> productDTOS = products.stream()
                 .map(product -> {
-                    ProductDTO productDTO = modelMapper.map(product, ProductDTO.class);
-                    productDTO.setImage(constructImageUrl(product.getImage()));
-                    return productDTO;
+                    return mapProductToDto(product);
                 })
                 .toList();
 
@@ -142,9 +144,7 @@ public class ProductServiceImpl implements ProductService {
 
         List<ProductDTO> productDTOS = products.stream()
                 .map(product -> {
-                    ProductDTO productDTO = modelMapper.map(product, ProductDTO.class);
-                    productDTO.setImage(constructImageUrl(product.getImage()));
-                    return productDTO;
+                    return mapProductToDto(product);
                 })
                 .toList();
 
@@ -173,9 +173,7 @@ public class ProductServiceImpl implements ProductService {
 
         List<ProductDTO> productDTOS = products.stream()
                 .map(product -> {
-                    ProductDTO productDTO = modelMapper.map(product, ProductDTO.class);
-                    productDTO.setImage(constructImageUrl(product.getImage()));
-                    return productDTO;
+                    return mapProductToDto(product);
                 })
                 .toList();
 
@@ -213,7 +211,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         List<ProductDTO> productDTOS = products.stream()
-                .map(product -> modelMapper.map(product, ProductDTO.class))
+                .map(this::mapProductToDto)
                 .toList();
 
         ProductResponse productResponse = new ProductResponse();
@@ -237,7 +235,7 @@ public class ProductServiceImpl implements ProductService {
 
         List<Product> products = pageProducts.getContent();
         List<ProductDTO> productDTOS = products.stream()
-                .map(product -> modelMapper.map(product, ProductDTO.class))
+                .map(this::mapProductToDto)
                 .toList();
 
         if(products.isEmpty()){
@@ -312,6 +310,21 @@ public class ProductServiceImpl implements ProductService {
 
         Product updatedProduct = productRepository.save(productFromDb);
         return modelMapper.map(updatedProduct, ProductDTO.class);
+    }
+
+    @Override
+    public ProductDTO getProductById(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        return mapProductToDto(product);
+    }
+
+    private ProductDTO mapProductToDto(Product product) {
+        ProductDTO productDTO = modelMapper.map(product, ProductDTO.class);
+        productDTO.setImage(constructImageUrl(product.getImage()));
+        productDTO.setAverageRating(reviewRepository.getAverageRatingByProductId(product.getProductId()));
+        productDTO.setReviewCount(reviewRepository.countByProductProductId(product.getProductId()));
+        return productDTO;
     }
 
 

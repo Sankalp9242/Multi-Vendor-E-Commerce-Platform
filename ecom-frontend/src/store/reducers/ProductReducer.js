@@ -1,6 +1,7 @@
 const initialState = {
     products: null,
     categories: null,
+    productReviews: [],
     pagination: {},
 };
 
@@ -32,6 +33,12 @@ export const productReducer = (state = initialState, action) => {
                     totalPages: action.totalPages,
                     lastPage: action.lastPage,
                 },
+            };
+
+        case "FETCH_PRODUCT_REVIEWS":
+            return {
+                ...state,
+                productReviews: action.payload,
             };
         
     

@@ -54,10 +54,14 @@ export const adminNavigation = [
 
 export const sellerNavigation = [
   {
+    name: "Dashboard", 
+    href: "/seller", 
+    icon: FaHome,
+    current: true 
+  }, {
     name: "Orders", 
     href: "/seller/orders", 
-    icon: FaShoppingCart,
-    current: true 
+    icon: FaShoppingCart
   }, {
     name: "Products", 
     href: "/seller/products", 

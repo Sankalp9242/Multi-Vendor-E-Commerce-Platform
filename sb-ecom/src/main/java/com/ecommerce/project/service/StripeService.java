@@ -7,4 +7,6 @@ import com.stripe.model.PaymentIntent;
 public interface StripeService {
 
     PaymentIntent paymentIntent(StripePaymentDto stripePaymentDto) throws StripeException;
+
+    PaymentIntent retrievePaymentIntent(String paymentIntentId) throws StripeException;
 }

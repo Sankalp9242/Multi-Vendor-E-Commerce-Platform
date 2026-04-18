@@ -6,8 +6,8 @@ const SellerOrderDetails = ({ order }) => {
 
   return (
     <div className="space-y-6 py-4">
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="rounded-lg border p-4 space-y-2">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2 rounded-lg border p-4">
           <h3 className="text-lg font-semibold text-slate-800">Order Info</h3>
           <p><strong>Order ID:</strong> {order?.id}</p>
           <p><strong>Customer Email:</strong> {order?.email}</p>
@@ -16,7 +16,7 @@ const SellerOrderDetails = ({ order }) => {
           <p><strong>Total Amount:</strong> {formatPrice(order?.totalAmount || 0)}</p>
         </div>
 
-        <div className="rounded-lg border p-4 space-y-2">
+        <div className="space-y-2 rounded-lg border p-4">
           <h3 className="text-lg font-semibold text-slate-800">Payment Info</h3>
           <p><strong>Gateway:</strong> {payment?.pgName || "N/A"}</p>
           <p><strong>Method:</strong> {payment?.paymentMethod || "N/A"}</p>
@@ -27,7 +27,16 @@ const SellerOrderDetails = ({ order }) => {
       </div>
 
       <div className="rounded-lg border p-4">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">Products In This Order</h3>
+        <h3 className="mb-4 text-lg font-semibold text-slate-800">Shipping Info</h3>
+        <div className="grid gap-3 md:grid-cols-3">
+          <p><strong>Carrier:</strong> {order?.carrierName || "N/A"}</p>
+          <p><strong>Tracking:</strong> {order?.trackingNumber || "N/A"}</p>
+          <p><strong>Estimated Delivery:</strong> {order?.estimatedDeliveryDate || "N/A"}</p>
+        </div>
+      </div>
+
+      <div className="rounded-lg border p-4">
+        <h3 className="mb-4 text-lg font-semibold text-slate-800">Products In This Order</h3>
         <div className="space-y-3">
           {orderItems.length === 0 ? (
             <p className="text-slate-500">No order items found.</p>
@@ -35,13 +44,13 @@ const SellerOrderDetails = ({ order }) => {
             orderItems.map((item) => (
               <div
                 key={item.orderItemId}
-                className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border rounded-md p-3"
+                className="flex flex-col gap-2 rounded-md border p-3 md:flex-row md:items-center md:justify-between"
               >
                 <div>
                   <p className="font-semibold text-slate-800">{item.product?.productName}</p>
                   <p className="text-sm text-slate-500">{item.product?.description}</p>
                 </div>
-                <div className="text-sm text-slate-700 space-y-1">
+                <div className="space-y-1 text-sm text-slate-700">
                   <p><strong>Qty:</strong> {item.quantity}</p>
                   <p><strong>Price:</strong> {formatPrice(item.orderedProductPrice)}</p>
                   <p><strong>Discount:</strong> {item.discount}%</p>

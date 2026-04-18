@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserOrders } from "../../store/actions";
 import Loader from "../shared/Loader";
@@ -15,79 +15,56 @@ const UserOrders = () => {
 
   if (isLoading) return <Loader />;
 
-  if (errorMessage)
-    return (
-      <div className="text-center text-red-500 mt-10">
-        {errorMessage}
-      </div>
-    );
+  if (errorMessage) {
+    return <div className="mt-10 text-center text-red-500">{errorMessage}</div>;
+  }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
-      <h1 className="text-3xl font-bold mb-6">My Orders</h1>
+    <div className="mx-auto max-w-5xl px-6 py-8">
+      <h1 className="mb-6 text-3xl font-bold">My Orders</h1>
 
-      {(!userOrders || userOrders.length === 0) ? (
-        <div className="text-center text-gray-500">
-          You haven’t placed any orders yet.
-        </div>
+      {!userOrders || userOrders.length === 0 ? (
+        <div className="text-center text-gray-500">You have not placed any orders yet.</div>
       ) : (
         <div className="space-y-6">
           {userOrders.map((order) => (
-            <div
-              key={order.orderId}
-              className="border rounded-lg shadow-sm p-5 bg-white"
-            >
-              {/* Order Header */}
-              <div className="flex justify-between items-center mb-4">
+            <div key={order.orderId} className="rounded-lg border bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <p className="font-semibold">
-                    Order #{order.orderId}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {order.orderDate}
-                  </p>
+                  <p className="font-semibold">Order #{order.orderId}</p>
+                  <p className="text-sm text-gray-500">{order.orderDate}</p>
                 </div>
 
-                <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+                <span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-700">
                   {order.orderStatus}
                 </span>
               </div>
 
-              {/* Order Items */}
               <div className="divide-y">
                 {order.orderItems.map((item) => (
-                  <div
-                    key={item.orderItemId}
-                    className="flex justify-between py-3"
-                  >
+                  <div key={item.orderItemId} className="flex justify-between py-3">
                     <div>
-                      <p className="font-medium">
-                        {item.product.productName}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Quantity: {item.quantity}
-                      </p>
+                      <p className="font-medium">{item.product.productName}</p>
+                      <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                     </div>
 
-                    <p className="font-semibold">
-                      ₹{item.orderedProductPrice}
-                    </p>
+                    <p className="font-semibold">Rs. {item.orderedProductPrice}</p>
                   </div>
                 ))}
               </div>
 
-              {/* Footer */}
-              <div className="flex justify-between items-center mt-4 text-sm">
+              <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
                 <p className="text-gray-600">
                   Payment:{" "}
                   <span className="font-medium">
-                    {order.payment.pgName} (
-                    {order.payment.pgStatus})
+                    {order.payment?.pgName || "N/A"} ({order.payment?.pgStatus || "N/A"})
                   </span>
                 </p>
-
-                <p className="font-bold text-lg">
-                  Total: ₹{order.totalAmount}
+                <p className="font-bold text-lg">Total: Rs. {order.totalAmount}</p>
+                <p className="text-gray-600">Carrier: {order.carrierName || "Not assigned yet"}</p>
+                <p className="text-gray-600">Tracking: {order.trackingNumber || "Not available yet"}</p>
+                <p className="text-gray-600">
+                  Estimated Delivery: {order.estimatedDeliveryDate || "Will be updated soon"}
                 </p>
               </div>
             </div>

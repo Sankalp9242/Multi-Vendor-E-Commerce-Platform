@@ -36,6 +36,9 @@ public class Order {
 
     private Double totalAmount;
     private String orderStatus;
+    private String carrierName;
+    private String trackingNumber;
+    private LocalDate estimatedDeliveryDate;
 
     // Reference to Address
     @ManyToOne

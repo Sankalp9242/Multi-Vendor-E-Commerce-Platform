@@ -1,6 +1,7 @@
 package com.ecommerce.project.controller;
 
 import com.ecommerce.project.payload.AnalyticsResponse;
+import com.ecommerce.project.util.AuthUtil;
 import com.ecommerce.project.service.AnalyticsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,9 +17,18 @@ public class AnalyticsController {
     @Autowired
     private AnalyticsService analyticsService;
 
+    @Autowired
+    private AuthUtil authUtil;
+
     @GetMapping("/admin/app/analytics")
     public ResponseEntity<AnalyticsResponse> getAnalytics() {
         AnalyticsResponse response = analyticsService.getAnalyticsData();
+        return new ResponseEntity<AnalyticsResponse>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/seller/app/analytics")
+    public ResponseEntity<AnalyticsResponse> getSellerAnalytics() {
+        AnalyticsResponse response = analyticsService.getSellerAnalyticsData(authUtil.loggedInUserId());
         return new ResponseEntity<AnalyticsResponse>(response, HttpStatus.OK);
     }
 }

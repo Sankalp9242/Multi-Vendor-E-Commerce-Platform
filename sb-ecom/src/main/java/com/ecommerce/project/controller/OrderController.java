@@ -5,15 +5,20 @@ import com.ecommerce.project.payload.*;
 import com.ecommerce.project.security.services.UserDetailsImpl;
 import com.ecommerce.project.service.OrderService;
 import com.ecommerce.project.service.StripeService;
+import com.stripe.exception.SignatureVerificationException;
 import com.ecommerce.project.util.AuthUtil;
+import com.stripe.model.Event;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
+import com.stripe.net.Webhook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -30,6 +35,9 @@ public class OrderController {
 
     @Autowired
     private StripeService stripeService;
+
+    @Value("${stripe.webhook.secret:}")
+    private String stripeWebhookSecret;
 
     @PostMapping("/order/users/payments/{paymentMethod}")
     public ResponseEntity<OrderDTO> orderProducts(@PathVariable String paymentMethod, @RequestBody OrderRequestDTO orderRequestDTO) {
@@ -68,6 +76,42 @@ public class OrderController {
         return new ResponseEntity<>(paymentIntent.getClientSecret(), HttpStatus.CREATED);
     }
 
+    @PostMapping("/order/stripe-webhook")
+    public ResponseEntity<String> handleStripeWebhook(
+            @RequestBody String payload,
+            @RequestHeader("Stripe-Signature") String signatureHeader) {
+        if (stripeWebhookSecret == null || stripeWebhookSecret.isBlank()) {
+            log.warn("Stripe webhook secret is not configured");
+            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("Webhook secret not configured");
+        }
+
+        try {
+            Event event = Webhook.constructEvent(payload, signatureHeader, stripeWebhookSecret);
+
+            if ("payment_intent.succeeded".equals(event.getType())
+                    || "payment_intent.payment_failed".equals(event.getType())
+                    || "payment_intent.canceled".equals(event.getType())) {
+                PaymentIntent paymentIntent = (PaymentIntent) event.getDataObjectDeserializer()
+                        .getObject()
+                        .orElseThrow(() -> new IllegalStateException("Unable to deserialize Stripe event"));
+
+                orderService.syncStripePaymentStatus(
+                        paymentIntent.getId(),
+                        paymentIntent.getStatus(),
+                        "Stripe webhook event: " + event.getType()
+                );
+            }
+
+            return ResponseEntity.ok("Webhook processed");
+        } catch (SignatureVerificationException e) {
+            log.warn("Invalid Stripe webhook signature");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid signature");
+        } catch (Exception e) {
+            log.error("Error processing Stripe webhook", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Webhook processing failed");
+        }
+    }
+
     @GetMapping("/admin/orders")
     public ResponseEntity<OrderResponse> getAllOrders(
             @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false) Integer pageNumber,
@@ -93,14 +137,27 @@ public class OrderController {
     @PutMapping("/admin/orders/{orderId}/status")
     public ResponseEntity<OrderDTO> updateOrderStatus(@PathVariable Long orderId,
                                                       @RequestBody OrderStatusUpdateDto orderStatusUpdateDto) {
-        OrderDTO order = orderService.updateOrder(orderId, orderStatusUpdateDto.getStatus());
+        OrderDTO order = orderService.updateOrder(
+                orderId,
+                orderStatusUpdateDto.getStatus(),
+                orderStatusUpdateDto.getCarrierName(),
+                orderStatusUpdateDto.getTrackingNumber(),
+                orderStatusUpdateDto.getEstimatedDeliveryDate()
+        );
         return new ResponseEntity<OrderDTO>(order, HttpStatus.OK);
     }
 
     @PutMapping("/seller/orders/{orderId}/status")
     public ResponseEntity<OrderDTO> updateOrderStatusSeller(@PathVariable Long orderId,
                                                       @RequestBody OrderStatusUpdateDto orderStatusUpdateDto) {
-        OrderDTO order = orderService.updateOrder(orderId, orderStatusUpdateDto.getStatus());
+        OrderDTO order = orderService.updateOrderForSeller(
+                orderId,
+                orderStatusUpdateDto.getStatus(),
+                authUtil.loggedInUserId(),
+                orderStatusUpdateDto.getCarrierName(),
+                orderStatusUpdateDto.getTrackingNumber(),
+                orderStatusUpdateDto.getEstimatedDeliveryDate()
+        );
         return new ResponseEntity<OrderDTO>(order, HttpStatus.OK);
     }
 }

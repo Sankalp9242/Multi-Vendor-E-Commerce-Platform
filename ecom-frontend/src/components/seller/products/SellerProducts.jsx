@@ -17,10 +17,7 @@ import { deleteProduct } from "../../../store/actions";
 import useSellerProductFilter from "../../../hooks/useSellerProductFilter";
 
 const SellerProducts = () => {
- const { products, pagination } = useSelector(
-  (state) => state.sellerProducts
-);
-
+  const { products, pagination } = useSelector((state) => state.sellerProducts);
   const { isLoading } = useSelector((state) => state.errors);
   const dispatch = useDispatch();
 
@@ -30,7 +27,6 @@ const SellerProducts = () => {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openProductViewModal, setOpenProductViewModal] = useState(false);
   const [openImageUploadModal, setOpenImageUploadModal] = useState(false);
-
   const [loader, setLoader] = useState(false);
 
   const navigate = useNavigate();
@@ -38,29 +34,27 @@ const SellerProducts = () => {
   const params = new URLSearchParams(searchParams);
   const pathname = useLocation().pathname;
 
-const handleEdit = (product) => {
-  setSelectedProduct(product);
-  setOpenUpdateModal(true);
-};
+  const handleEdit = (product) => {
+    setSelectedProduct(product);
+    setOpenUpdateModal(true);
+  };
 
-const handleDelete = (product) => {
-  setSelectedProduct(product);
-  setOpenDeleteModal(true);
-};
+  const handleDelete = (product) => {
+    setSelectedProduct(product);
+    setOpenDeleteModal(true);
+  };
 
-const handleImageUpload = (product) => {
-  setSelectedProduct(product);
-  setOpenImageUploadModal(true);
-};
+  const handleImageUpload = (product) => {
+    setSelectedProduct(product);
+    setOpenImageUploadModal(true);
+  };
 
-const handleProductView = (product) => {
-  setSelectedProduct(product);
-  setOpenProductViewModal(true);
-};
+  const handleProductView = (product) => {
+    setSelectedProduct(product);
+    setOpenProductViewModal(true);
+  };
 
-  //  IMPORTANT: use SELLER filter
-useSellerProductFilter();
- // we’ll adjust hook
+  useSellerProductFilter();
 
   const tableRecords = products?.map((item) => ({
     id: item.productId,
@@ -87,10 +81,11 @@ useSellerProductFilter();
 
   return (
     <div>
-      <div className="pt-6 pb-10 flex justify-end">
+      <div className="flex justify-end pb-10 pt-6">
         <button
           onClick={() => setOpenAddModal(true)}
-          className="bg-custom-blue text-white font-semibold py-2 px-4 flex items-center gap-2 rounded-md">
+          className="flex items-center gap-2 rounded-md bg-custom-blue px-4 py-2 font-semibold text-white"
+        >
           <MdAddShoppingCart className="text-xl" />
           Add Product
         </button>
@@ -99,29 +94,29 @@ useSellerProductFilter();
       {isLoading ? (
         <Loader />
       ) : emptyProduct ? (
-        <div className="flex flex-col items-center justify-center text-gray-600 py-10">
+        <div className="flex flex-col items-center justify-center py-10 text-gray-600">
           <FaBoxOpen size={50} className="mb-3" />
           <h2 className="text-2xl font-semibold">No products yet</h2>
         </div>
       ) : (
         <DataGrid
-                  rows={tableRecords}
-                  columns={adminProductTableColumn(
-                     handleEdit,
-                     handleDelete,
-                     handleImageUpload,
-                     handleProductView
-        )}
+          rows={tableRecords}
+          columns={adminProductTableColumn(
+            handleEdit,
+            handleDelete,
+            handleImageUpload,
+            handleProductView
+          )}
           paginationMode="server"
           rowCount={pagination?.totalElements || 0}
           onPaginationModelChange={handlePaginationChange}
         />
       )}
 
-      {/* MODALS */}
       <Modal
         open={openAddModal || openUpdateModal}
-        setOpen={openUpdateModal ? setOpenUpdateModal : setOpenAddModal}>
+        setOpen={openUpdateModal ? setOpenUpdateModal : setOpenAddModal}
+      >
         <AddProductForm
           setOpen={openUpdateModal ? setOpenUpdateModal : setOpenAddModal}
           product={selectedProduct}

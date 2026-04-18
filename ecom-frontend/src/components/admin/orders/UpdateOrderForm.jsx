@@ -1,95 +1,149 @@
-import { Button, FormControl, FormHelperText, InputLabel, MenuItem, Select } from '@mui/material'
-import { useState } from 'react'
-import Spinners from '../../shared/Spinners';
-import { useDispatch, useSelector } from 'react-redux';
-import { updateOrderStatusFromDashboard } from '../../../store/actions';
-import toast from 'react-hot-toast';
+import { Button, FormControl, FormHelperText, InputLabel, MenuItem, Select, TextField } from "@mui/material";
+import { useMemo, useState } from "react";
+import Spinners from "../../shared/Spinners";
+import { useDispatch, useSelector } from "react-redux";
+import { updateOrderStatusFromDashboard } from "../../../store/actions";
+import toast from "react-hot-toast";
 
 const ORDER_STATUSES = [
-    "PENDING",
-    "CONFIRMED",
-    "SHIPPED",
-    "DELIVERED",
-    "CANCELLED",
+  "PENDING",
+  "CONFIRMED",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
 ];
 
-const UpdateOrderForm = ({ setOpen, selectedId, selectedItem, loader, setLoader}) => {
-    const [orderStatus, setOrderStatus] = useState(selectedItem?.status || 'PENDING');
-    const [error, setError] = useState("");
-    const dispatch = useDispatch();
+const UpdateOrderForm = ({ setOpen, selectedId, selectedItem, loader, setLoader }) => {
+  const [orderStatus, setOrderStatus] = useState(selectedItem?.status || "PENDING");
+  const [carrierName, setCarrierName] = useState(selectedItem?.carrierName || "");
+  const [trackingNumber, setTrackingNumber] = useState(selectedItem?.trackingNumber || "");
+  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState(
+    selectedItem?.estimatedDeliveryDate || ""
+  );
+  const [error, setError] = useState("");
+  const dispatch = useDispatch();
 
-    const { user } = useSelector((state) => state.auth);
-    const isAdmin = user && user?.roles?.includes("ROLE_ADMIN");
+  const { user } = useSelector((state) => state.auth);
+  const isAdmin = user && user?.roles?.includes("ROLE_ADMIN");
 
-    const updateOrderStatus = (e) => {
-        e.preventDefault();
-        if (!orderStatus) {
-            setError("Order status is required");
-            return;
-        }
-        dispatch(updateOrderStatusFromDashboard(
-            selectedId,
-            orderStatus,
-            toast,
-            setLoader,
-            isAdmin
-        ));
-    };
+  const requiresShippingInfo = useMemo(
+    () => orderStatus === "SHIPPED" || orderStatus === "DELIVERED",
+    [orderStatus]
+  );
+
+  const updateOrderStatus = (e) => {
+    e.preventDefault();
+
+    if (!orderStatus) {
+      setError("Order status is required");
+      return;
+    }
+
+    if (requiresShippingInfo && (!carrierName.trim() || !trackingNumber.trim())) {
+      setError("Carrier name and tracking number are required for shipped or delivered orders");
+      return;
+    }
+
+    dispatch(
+      updateOrderStatusFromDashboard(
+        selectedId,
+        {
+          status: orderStatus,
+          carrierName: carrierName.trim() || null,
+          trackingNumber: trackingNumber.trim() || null,
+          estimatedDeliveryDate: estimatedDeliveryDate || null,
+        },
+        toast,
+        setLoader,
+        isAdmin
+      )
+    );
+  };
 
   return (
-    <div className='py-5 relative h-full'>
-        <form className='space-y-4' onSubmit={updateOrderStatus}>
-            <FormControl fullWidth variant='outlined' error={!!error}>
-                <InputLabel id="order-status-label">Order Status</InputLabel>
-                <Select
-                    labelId='order-status-label'
-                    label='Order Status'
-                    value={orderStatus}
-                    onChange={(e) => {
-                        setOrderStatus(e.target.value);
-                        setError("");
-                    }}>
-                    
-                    {
-                        ORDER_STATUSES.map((status) => (
-                            <MenuItem key={status} value={status}>
-                                {status}
-                            </MenuItem>
-                        ))
-                    }
+    <div className="relative h-full py-5">
+      <form className="space-y-4" onSubmit={updateOrderStatus}>
+        <FormControl fullWidth variant="outlined" error={!!error}>
+          <InputLabel id="order-status-label">Order Status</InputLabel>
+          <Select
+            labelId="order-status-label"
+            label="Order Status"
+            value={orderStatus}
+            onChange={(e) => {
+              setOrderStatus(e.target.value);
+              setError("");
+            }}
+          >
+            {ORDER_STATUSES.map((status) => (
+              <MenuItem key={status} value={status}>
+                {status}
+              </MenuItem>
+            ))}
+          </Select>
 
-                </Select>
+          {error && <FormHelperText>{error}</FormHelperText>}
+        </FormControl>
 
-                {error && <FormHelperText>{error}</FormHelperText>}
-            </FormControl>
+        <TextField
+          fullWidth
+          label="Carrier Name"
+          value={carrierName}
+          onChange={(e) => {
+            setCarrierName(e.target.value);
+            setError("");
+          }}
+          placeholder="Blue Dart, Delhivery, DHL..."
+        />
 
-            <div className='flex w-full justify-between items-center absolute bottom-14'>
-                <Button disabled={loader}
-                        onClick={() => setOpen(false)}
-                        variant='outlined'
-                        className='text-white py-[10px] px-4 text-sm font-medium'>
-                    Cancel
-                </Button>
+        <TextField
+          fullWidth
+          label="Tracking Number"
+          value={trackingNumber}
+          onChange={(e) => {
+            setTrackingNumber(e.target.value);
+            setError("");
+          }}
+          placeholder="Enter shipment tracking number"
+        />
 
-                <Button
-                    disabled={loader}
-                    type='submit'
-                    variant='contained'
-                    color='primary'
-                    className='bg-custom-blue text-white  py-[10px] px-4 text-sm font-medium'>
-                    {loader ? (
-                        <div className='flex gap-2 items-center'>
-                            <Spinners /> Loading...
-                        </div>
-                    ) : (
-                        "Update"
-                    )}
-                </Button>
-            </div>
-        </form>
+        <TextField
+          fullWidth
+          type="date"
+          label="Estimated Delivery Date"
+          value={estimatedDeliveryDate}
+          onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
 
+        <div className="absolute bottom-14 flex w-full items-center justify-between">
+          <Button
+            disabled={loader}
+            onClick={() => setOpen(false)}
+            variant="outlined"
+            className="px-4 py-[10px] text-sm font-medium text-white"
+          >
+            Cancel
+          </Button>
+
+          <Button
+            disabled={loader}
+            type="submit"
+            variant="contained"
+            color="primary"
+            className="bg-custom-blue px-4 py-[10px] text-sm font-medium text-white"
+          >
+            {loader ? (
+              <div className="flex items-center gap-2">
+                <Spinners /> Loading...
+              </div>
+            ) : (
+              "Update"
+            )}
+          </Button>
+        </div>
+      </form>
     </div>
-  )
-}
+  );
+};
 
-export default UpdateOrderForm
+export default UpdateOrderForm;

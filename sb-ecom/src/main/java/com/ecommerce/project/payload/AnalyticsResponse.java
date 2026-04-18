@@ -11,4 +11,7 @@ public class AnalyticsResponse {
     private String productCount;
     private String totalRevenue;
     private String totalOrders;
+    private String pendingOrders;
+    private String deliveredOrders;
+    private String soldUnits;
 }
