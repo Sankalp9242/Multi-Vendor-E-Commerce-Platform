@@ -219,6 +219,9 @@ export const registerNewUser
 export const logOutUser = (navigate) => (dispatch) => {
     dispatch({ type:"LOG_OUT" });
     localStorage.removeItem("auth");
+    localStorage.removeItem("CHECKOUT_ADDRESS");
+    localStorage.removeItem("client-secret");
+    localStorage.removeItem("cartItems");
     navigate("/login");
 };
 
@@ -279,8 +282,19 @@ export const clearCheckoutAddress = () => {
 export const getUserAddresses = () => async (dispatch) => {
     try {
         dispatch({ type: "IS_FETCHING" });
-        const { data } = await api.get(`/addresses`);
+        const { data } = await api.get(`/users/addresses`);
         dispatch({type: "USER_ADDRESS", payload: data});
+        const selectedAddress = localStorage.getItem("CHECKOUT_ADDRESS")
+            ? JSON.parse(localStorage.getItem("CHECKOUT_ADDRESS"))
+            : null;
+        if (selectedAddress) {
+            const addressStillExists = data.some(
+                (address) => address.addressId === selectedAddress.addressId
+            );
+            if (!addressStillExists) {
+                dispatch(clearCheckoutAddress());
+            }
+        }
         dispatch({ type: "IS_SUCCESS" });
     } catch (error) {
         console.log(error);

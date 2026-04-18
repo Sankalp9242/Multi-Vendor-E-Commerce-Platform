@@ -3,7 +3,7 @@ import { FaCheckCircle } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
-import { stripePaymentConfirmation } from "../../store/actions";
+import { clearCheckoutAddress, stripePaymentConfirmation } from "../../store/actions";
 import Skeleton from "../shared/Skeleton";
 
 const PaymentConfirmation = () => {
@@ -14,6 +14,7 @@ const PaymentConfirmation = () => {
   const [loading, setLoading] = useState(false);
   const hasSubmittedRef = useRef(false);
   const { cart } = useSelector((state) => state.carts);
+  const { address: userAddresses = [] } = useSelector((state) => state.auth);
 
   const paymentIntent = searchParams.get("payment_intent");
   const clientSecret = searchParams.get("payment_intent_client_secret");
@@ -26,15 +27,23 @@ const PaymentConfirmation = () => {
     : null;
 
   useEffect(() => {
+    const addressBelongsToUser = !!selectedUserCheckoutAddress?.addressId
+      && userAddresses.some((address) => address.addressId === selectedUserCheckoutAddress.addressId);
+
     if (
       hasSubmittedRef.current ||
       !paymentIntent ||
       !clientSecret ||
       redirectStatus !== "succeeded" ||
       !selectedUserCheckoutAddress?.addressId ||
+      !addressBelongsToUser ||
       !cart?.length ||
       processedPaymentIntent
     ) {
+      if (selectedUserCheckoutAddress?.addressId && userAddresses.length > 0 && !addressBelongsToUser) {
+        dispatch(clearCheckoutAddress());
+        setErrorMessage("Please select your address again before placing the order.");
+      }
       return;
     }
 
@@ -62,6 +71,7 @@ const PaymentConfirmation = () => {
     clientSecret,
     redirectStatus,
     selectedUserCheckoutAddress,
+    userAddresses,
     cart,
     processedPaymentIntent,
     dispatch,
