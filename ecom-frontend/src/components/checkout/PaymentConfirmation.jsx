@@ -3,7 +3,7 @@ import { FaCheckCircle } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
-import { clearCheckoutAddress, stripePaymentConfirmation } from "../../store/actions";
+import { clearCheckoutAddress, getUserAddresses, stripePaymentConfirmation } from "../../store/actions";
 import Skeleton from "../shared/Skeleton";
 
 const PaymentConfirmation = () => {
@@ -12,9 +12,9 @@ const PaymentConfirmation = () => {
   const dispatch = useDispatch();
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [addressesRequested, setAddressesRequested] = useState(false);
   const hasSubmittedRef = useRef(false);
-  const { cart } = useSelector((state) => state.carts);
-  const { address: userAddresses = [] } = useSelector((state) => state.auth);
+  const { user, address: userAddresses = [] } = useSelector((state) => state.auth);
 
   const paymentIntent = searchParams.get("payment_intent");
   const clientSecret = searchParams.get("payment_intent_client_secret");
@@ -27,20 +27,39 @@ const PaymentConfirmation = () => {
     : null;
 
   useEffect(() => {
+    if (!addressesRequested && user && selectedUserCheckoutAddress?.addressId) {
+      setAddressesRequested(true);
+      dispatch(getUserAddresses());
+    }
+  }, [addressesRequested, dispatch, selectedUserCheckoutAddress, user]);
+
+  useEffect(() => {
+    if (redirectStatus !== "succeeded" || !paymentIntent || !clientSecret) {
+      return;
+    }
+
+    if (!selectedUserCheckoutAddress?.addressId) {
+      setErrorMessage("Please select an address again before placing the order.");
+      return;
+    }
+
+    if (!addressesRequested) {
+      return;
+    }
+
+    if (userAddresses.length === 0) {
+      return;
+    }
+
     const addressBelongsToUser = !!selectedUserCheckoutAddress?.addressId
       && userAddresses.some((address) => address.addressId === selectedUserCheckoutAddress.addressId);
 
     if (
       hasSubmittedRef.current ||
-      !paymentIntent ||
-      !clientSecret ||
-      redirectStatus !== "succeeded" ||
-      !selectedUserCheckoutAddress?.addressId ||
       !addressBelongsToUser ||
-      !cart?.length ||
       processedPaymentIntent
     ) {
-      if (selectedUserCheckoutAddress?.addressId && userAddresses.length > 0 && !addressBelongsToUser) {
+      if (!addressBelongsToUser) {
         dispatch(clearCheckoutAddress());
         setErrorMessage("Please select your address again before placing the order.");
       }
@@ -75,6 +94,8 @@ const PaymentConfirmation = () => {
     cart,
     processedPaymentIntent,
     dispatch,
+    addressesRequested,
+    userAddresses.length,
   ]);
 
   return (
