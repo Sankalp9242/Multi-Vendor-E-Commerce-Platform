@@ -22,4 +22,8 @@ public class UserDTO {
 	private Set<Role> roles = new HashSet<>();
 	private AddressDTO address;
 	private CartDTO cart;
+	private Boolean sellerApproved;
+	private Boolean sellerActive;
+	private String storeName;
+	private String storeDescription;
 }

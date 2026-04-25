@@ -20,12 +20,7 @@ const AddSellerForm = ({ setOpen }) => {
   });
 
   const addSellerHandler = (data) => {
-    const sendData = {
-      ...data,
-      role: ["seller"],
-    };
-
-    dispatch(addNewDashboardSeller(sendData, toast, reset, setOpen, setLoader));
+    dispatch(addNewDashboardSeller(data, toast, reset, setOpen, setLoader));
   };
 
   return (
@@ -62,6 +57,28 @@ const AddSellerForm = ({ setOpen }) => {
             register={register}
             errors={errors}
           />
+          <InputField
+            label="Store Name"
+            required
+            id="storeName"
+            type="text"
+            message="*Store name is required"
+            placeholder="Enter seller store name"
+            register={register}
+            errors={errors}
+          />
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-slate-800" htmlFor="storeDescription">
+              Store Description
+            </label>
+            <textarea
+              id="storeDescription"
+              rows={4}
+              placeholder="Describe the seller storefront"
+              className="w-full rounded-md border border-slate-300 px-4 py-2 outline-none"
+              {...register("storeDescription")}
+            />
+          </div>
         </div>
 
         <div className="flex  w-full justify-between items-center absolute bottom-14">

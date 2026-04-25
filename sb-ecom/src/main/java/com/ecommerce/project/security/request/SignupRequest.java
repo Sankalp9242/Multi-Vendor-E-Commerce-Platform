@@ -18,6 +18,10 @@ public class SignupRequest {
 
     private Set<String> role;
 
+    private String storeName;
+
+    private String storeDescription;
+
     @NotBlank
     @Size(min = 6, max = 40)
     private String password;

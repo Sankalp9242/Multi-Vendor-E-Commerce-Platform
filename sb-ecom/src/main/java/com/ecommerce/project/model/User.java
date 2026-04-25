@@ -42,6 +42,18 @@ public class User {
     @Column(name = "password")
     private String password;
 
+    @Column(name = "seller_approved")
+    private Boolean sellerApproved = false;
+
+    @Column(name = "seller_active")
+    private Boolean sellerActive = true;
+
+    @Column(name = "store_name")
+    private String storeName;
+
+    @Column(name = "store_description", length = 1000)
+    private String storeDescription;
+
     public User(String userName, String email, String password) {
         this.userName = userName;
         this.email = email;

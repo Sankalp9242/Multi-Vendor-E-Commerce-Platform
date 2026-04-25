@@ -16,6 +16,9 @@ const emptyOrder = !adminOrders || adminOrders.length === 0;
 
   return (
     <div className='pb-6 pt-20'>
+        <div className='mb-6 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600'>
+          Admin order access is monitoring-only in this marketplace flow. Open an order to inspect payment and delivery details.
+        </div>
         {emptyOrder ? (
             <div className='flex flex-col items-center justify-center text-gray-600 py-10'>
                 <FaShoppingCart size={50} className='mb-3'/>

@@ -15,8 +15,6 @@ const [loader, setLoader] = useState(false);
 const [selectedCategory, setSelectedCategory] = useState();
 const { categories } = useSelector((state) => state.products);
 const { categoryLoader, errorMessage } = useSelector((state) => state.errors);
-const { user } = useSelector((state) => state.auth);
-const isAdmin = user && user?.roles?.includes("ROLE_ADMIN");
 
 const dispatch = useDispatch();
     const {
@@ -37,14 +35,14 @@ const dispatch = useDispatch();
                 categoryId: selectedCategory.categoryId,
             };
             dispatch(addNewProductFromDashboard(
-                sendData, toast, reset, setLoader, setOpen, isAdmin
+                sendData, toast, reset, setLoader, setOpen, false
             ));
         } else {
             const sendData = {
                 ...data,
                 id: product.id,
             };
-            dispatch(updateProductFromDashboard(sendData, toast, reset, setLoader, setOpen, isAdmin));
+            dispatch(updateProductFromDashboard(sendData, toast, reset, setLoader, setOpen, false));
         }
     };
 
@@ -80,6 +78,11 @@ const dispatch = useDispatch();
     <div className='py-5 relative h-full'>
         <form className='space-y-4'
             onSubmit={handleSubmit(saveProductHandler)}>
+            <div className='rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900'>
+                {update
+                    ? "Updating this product will send it back for admin approval before it becomes visible to customers again."
+                    : "New seller products start in pending review and become live after admin approval."}
+            </div>
             <div className='flex md:flex-row flex-col gap-4 w-full'>
                 <InputField 
                     label="Product Name"

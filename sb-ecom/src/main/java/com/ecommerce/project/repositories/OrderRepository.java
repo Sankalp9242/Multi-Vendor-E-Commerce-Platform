@@ -17,6 +17,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Double getTotalRevenue();
     Page<Order> findByEmail(String email, Pageable pageable);
 
+    java.util.List<Order> findTop5ByOrderByOrderDateDesc();
+
     @Query("""
         SELECT COUNT(DISTINCT o.orderId) FROM Order o
         JOIN o.orderItems oi

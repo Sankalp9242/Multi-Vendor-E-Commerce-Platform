@@ -35,6 +35,10 @@ const Sellers = () => {
         </button>
       </div>
 
+      <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">
+        Use this screen to approve sellers and control whether their stores remain active on the marketplace.
+      </div>
+
       {!emptySellers && (
         <h1 className="text-slate-800 text-3xl text-center font-bold pb-6 uppercase">
           All Sellers
@@ -49,7 +53,7 @@ const Sellers = () => {
             <>
               <div className="flex flex-col items-center justify-center text-gray-600 py-10">
                 <h2 className="text-2xl font-semibold">
-                  No Seller Created Yet
+                  No sellers found
                 </h2>
               </div>
             </>

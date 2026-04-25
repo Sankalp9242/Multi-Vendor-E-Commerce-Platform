@@ -3,6 +3,7 @@ package com.ecommerce.project.payload;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.ecommerce.project.model.ProductStatus;
 
 @Data
 @NoArgsConstructor
@@ -18,4 +19,7 @@ public class ProductDTO {
     private double specialPrice;
     private Double averageRating;
     private Long reviewCount;
+    private Long sellerId;
+    private String sellerName;
+    private ProductStatus productStatus;
 }

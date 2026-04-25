@@ -8,6 +8,10 @@ public class UserInfoResponse {
     private String username;
     private String email;
     private List<String> roles;
+    private Boolean sellerApproved;
+    private Boolean sellerActive;
+    private String storeName;
+    private String storeDescription;
 
     public UserInfoResponse(Long id, String username, List<String> roles, String email, String jwtToken) {
         this.id = id;
@@ -62,6 +66,36 @@ public class UserInfoResponse {
     public void setEmail(String email) {
         this.email = email;
     }
+
+    public Boolean getSellerApproved() {
+        return sellerApproved;
+    }
+
+    public void setSellerApproved(Boolean sellerApproved) {
+        this.sellerApproved = sellerApproved;
+    }
+
+    public Boolean getSellerActive() {
+        return sellerActive;
+    }
+
+    public void setSellerActive(Boolean sellerActive) {
+        this.sellerActive = sellerActive;
+    }
+
+    public String getStoreName() {
+        return storeName;
+    }
+
+    public void setStoreName(String storeName) {
+        this.storeName = storeName;
+    }
+
+    public String getStoreDescription() {
+        return storeDescription;
+    }
+
+    public void setStoreDescription(String storeDescription) {
+        this.storeDescription = storeDescription;
+    }
 }
-
-

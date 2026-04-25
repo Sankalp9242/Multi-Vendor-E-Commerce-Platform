@@ -1,10 +1,11 @@
 import { DataGrid } from '@mui/x-data-grid'
 import { adminOrderTableColumn } from '../../helper/tableColumn';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import Modal from '../../shared/Modal';
 import UpdateOrderForm from './UpdateOrderForm';
 import SellerOrderDetails from '../../seller/orders/SellerOrderDetails';
+import { useSelector } from 'react-redux';
 
 const OrderTable = ({ adminOrder, pagination, title = "All Orders", showDetails = false }) => {
   const [updateOpenModal, setUpdateOpenModal] = useState(false);
@@ -19,6 +20,9 @@ const OrderTable = ({ adminOrder, pagination, title = "All Orders", showDetails 
   const [searchParams] = useSearchParams();
   const params = new URLSearchParams(searchParams);
   const pathname = useLocation().pathname;
+  const { user } = useSelector((state) => state.auth);
+  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const allowEdit = useMemo(() => !isAdmin, [isAdmin]);
 
 const tableRecords = adminOrder?.map((item) => {
   return {
@@ -63,7 +67,7 @@ const handleView = (order) => {
          <DataGrid
          className='w-full'
             rows={tableRecords}
-            columns={adminOrderTableColumn(handleEdit, showDetails ? handleView : null)}
+            columns={adminOrderTableColumn(handleEdit, showDetails || isAdmin ? handleView : null, allowEdit)}
             paginationMode='server'
             rowCount={pagination?.totalElements || 0}
             initialState={{
@@ -87,21 +91,23 @@ const handleView = (order) => {
           />
       </div>
 
-      <Modal
-        open={updateOpenModal}
-        setOpen={setUpdateOpenModal}
-        title='Update Order Status'>
-          <UpdateOrderForm
-            setOpen={setUpdateOpenModal}
-            open={updateOpenModal}
-            loader={loader}
-            setLoader={setLoader}
-            selectedId={selectedItem.id}
-            selectedItem={selectedItem}
-            />
-      </Modal>
+      {allowEdit && (
+        <Modal
+          open={updateOpenModal}
+          setOpen={setUpdateOpenModal}
+          title='Update Order Status'>
+            <UpdateOrderForm
+              setOpen={setUpdateOpenModal}
+              open={updateOpenModal}
+              loader={loader}
+              setLoader={setLoader}
+              selectedId={selectedItem.id}
+              selectedItem={selectedItem}
+              />
+        </Modal>
+      )}
 
-      {showDetails && (
+      {(showDetails || isAdmin) && (
         <Modal
           open={detailsOpenModal}
           setOpen={setDetailsOpenModal}

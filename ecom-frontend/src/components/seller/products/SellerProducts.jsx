@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import Loader from "../../shared/Loader";
 import { FaBoxOpen } from "react-icons/fa";
 import { DataGrid } from "@mui/x-data-grid";
-import { adminProductTableColumn } from "../../helper/tableColumn";
+import { sellerProductTableColumn } from "../../helper/tableColumn";
 import Modal from "../../shared/Modal";
 import DeleteModal from "../../shared/DeleteModal";
 import toast from "react-hot-toast";
@@ -59,6 +59,8 @@ const SellerProducts = () => {
   const tableRecords = products?.map((item) => ({
     id: item.productId,
     productName: item.productName,
+    productStatus: item.productStatus,
+    sellerName: item.sellerName,
     description: item.description,
     discount: item.discount,
     image: item.image,
@@ -91,6 +93,10 @@ const SellerProducts = () => {
         </button>
       </div>
 
+      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+        Seller listings follow marketplace moderation. New products and product changes stay <strong>PENDING</strong> until an admin approves them.
+      </div>
+
       {isLoading ? (
         <Loader />
       ) : emptyProduct ? (
@@ -101,7 +107,7 @@ const SellerProducts = () => {
       ) : (
         <DataGrid
           rows={tableRecords}
-          columns={adminProductTableColumn(
+          columns={sellerProductTableColumn(
             handleEdit,
             handleDelete,
             handleImageUpload,

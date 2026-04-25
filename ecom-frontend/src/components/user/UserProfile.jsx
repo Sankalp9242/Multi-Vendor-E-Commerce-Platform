@@ -41,6 +41,22 @@ const UserProfile = () => {
           <strong>Role:</strong> {role}
         </div>
 
+        {user?.roles?.includes("ROLE_SELLER") && (
+          <>
+            <div style={{ marginBottom: "10px" }}>
+              <strong>Store Name:</strong> {user?.storeName || "Not added"}
+            </div>
+            <div style={{ marginBottom: "20px" }}>
+              <strong>Store Status:</strong>{" "}
+              {user?.sellerApproved
+                ? user?.sellerActive
+                  ? "Approved and Active"
+                  : "Approved but Inactive"
+                : "Pending Approval"}
+            </div>
+          </>
+        )}
+
         <hr />
 
         <div

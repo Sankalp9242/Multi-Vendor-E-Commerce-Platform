@@ -12,6 +12,7 @@ const Register = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const [loader, setLoader] = useState(false);
+    const [accountType, setAccountType] = useState("customer");
 
     const {
         register,
@@ -23,8 +24,11 @@ const Register = () => {
     });
 
     const registerHandler = async (data) => {
-        console.log("Register Click");
-        dispatch(registerNewUser(data, toast, reset, navigate, setLoader));
+        const sendData = {
+            ...data,
+            role: accountType === "seller" ? ["seller"] : ["user"],
+        };
+        dispatch(registerNewUser(sendData, toast, reset, navigate, setLoader));
      };
 
     return (
@@ -40,6 +44,16 @@ const Register = () => {
                     </div>
             <hr className="mt-2 mb-5 text-black" />
             <div className="flex flex-col gap-3">
+                <div className='flex flex-col gap-2'>
+                    <label className='text-sm font-semibold text-slate-800'>Account Type</label>
+                    <select
+                        value={accountType}
+                        onChange={(e) => setAccountType(e.target.value)}
+                        className='rounded-md border border-slate-300 px-4 py-2 outline-none'>
+                        <option value="customer">Customer</option>
+                        <option value="seller">Seller</option>
+                    </select>
+                </div>
                 <InputField
                     label="UserName"
                     required
@@ -73,6 +87,33 @@ const Register = () => {
                     register={register}
                     errors={errors}
                     />
+
+                {accountType === "seller" && (
+                    <>
+                        <InputField
+                            label="Store Name"
+                            required
+                            id="storeName"
+                            type="text"
+                            message="*Store name is required"
+                            placeholder="Enter your store name"
+                            register={register}
+                            errors={errors}
+                        />
+                        <div className='flex flex-col gap-2'>
+                            <label className='text-sm font-semibold text-slate-800' htmlFor='storeDescription'>
+                                Store Description
+                            </label>
+                            <textarea
+                                id='storeDescription'
+                                rows={4}
+                                placeholder='Tell customers what your store offers'
+                                className='rounded-md border border-slate-300 px-4 py-2 outline-none'
+                                {...register("storeDescription")}
+                            />
+                        </div>
+                    </>
+                )}
             </div>
 
             <button

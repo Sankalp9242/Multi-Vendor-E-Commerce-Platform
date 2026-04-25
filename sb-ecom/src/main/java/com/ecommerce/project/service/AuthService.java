@@ -1,6 +1,8 @@
 package com.ecommerce.project.service;
 
 import com.ecommerce.project.payload.AuthenticationResult;
+import com.ecommerce.project.payload.SellerStatusUpdateDTO;
+import com.ecommerce.project.payload.UserDTO;
 import com.ecommerce.project.payload.UserResponse;
 import com.ecommerce.project.security.request.LoginRequest;
 import com.ecommerce.project.security.request.SignupRequest;
@@ -22,4 +24,6 @@ public interface AuthService {
     ResponseCookie logoutUser();
 
     UserResponse getAllSellers(Pageable pageable);
+
+    UserDTO updateSellerStatus(Long sellerId, SellerStatusUpdateDTO sellerStatusUpdateDTO);
 }

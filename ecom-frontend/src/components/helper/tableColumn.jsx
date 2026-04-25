@@ -1,371 +1,398 @@
-import { FaEdit, FaEye, FaImage, FaTrashAlt } from "react-icons/fa";
+import { FaCheckCircle, FaEdit, FaEye, FaImage, FaPauseCircle, FaPlayCircle, FaTrashAlt } from "react-icons/fa";
 import { MdOutlineEmail } from "react-icons/md";
 
-export const adminProductTableColumn = (
-  handleEdit,
-  handleDelete,
-  handleImageUpload,
-  handleProductView
-) => [
+const baseCellClasses = "text-slate-700 font-normal border text-center";
+const baseHeaderClasses = "text-black font-semibold text-center border";
+
+const renderActionButton = (onClick, Icon, label, className) => (
+  <button onClick={onClick} className={`flex items-center rounded-md px-4 h-9 text-white ${className}`}>
+    <Icon className="mr-2" />
+    {label}
+  </button>
+);
+
+const buildProductColumns = (config) => [
   {
     disableColumnMenu: true,
     sortable: false,
     field: "id",
-    headerName: "ID",
-    minWidth: 200,
+    headerName: "Product ID",
+    minWidth: 140,
     headerAlign: "center",
     align: "center",
-    editable: false,
-    headerClassName: "text-black font-semibold border",
-    cellClassName: "text-slate-700 font-normal border",
-    renderHeader: (params) => <span className="text-center">ProductID</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
   {
     disableColumnMenu: true,
     field: "productName",
-    headerName: "Product Name",
-    align: "center",
-    width: 260,
-    editable: false,
-    sortable: false,
+    headerName: "Product",
+    width: 220,
     headerAlign: "center",
-    headerClassName: "text-black font-semibold text-center border ",
-    cellClassName: "text-slate-700 font-normal border text-center",
-    renderHeader: (params) => <span>Product Name</span>,
+    align: "center",
+    sortable: false,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
-
+  {
+    disableColumnMenu: true,
+    field: "sellerName",
+    headerName: "Seller",
+    width: 180,
+    headerAlign: "center",
+    align: "center",
+    sortable: false,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
+  },
+  {
+    disableColumnMenu: true,
+    field: "productStatus",
+    headerName: "Status",
+    width: 150,
+    headerAlign: "center",
+    align: "center",
+    sortable: false,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
+  },
   {
     disableColumnMenu: true,
     field: "price",
     headerName: "Price",
-    minWidth: 200,
+    minWidth: 120,
     headerAlign: "center",
     align: "center",
-    editable: false,
-    headerClassName: "text-black font-semibold border",
-    cellClassName: "text-slate-700 font-normal border",
-    renderHeader: (params) => <span className="text-center">Price</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
   {
     disableColumnMenu: true,
     field: "quantity",
-    headerName: "Quantity",
-    minWidth: 200,
+    headerName: "Stock",
+    minWidth: 120,
     headerAlign: "center",
     align: "center",
-    editable: false,
-    headerClassName: "text-black font-semibold border",
-    cellClassName: "text-slate-700 font-normal border",
-    renderHeader: (params) => <span className="text-center">Quantity</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
   {
     disableColumnMenu: true,
     field: "specialPrice",
-    headerName: "Price",
-    minWidth: 200,
+    headerName: "Special Price",
+    minWidth: 150,
     headerAlign: "center",
     align: "center",
-    editable: false,
-    headerClassName: "text-black font-semibold border",
-    cellClassName: "text-slate-700 font-normal border",
-    renderHeader: (params) => (
-      <span className="text-center">Special Price</span>
-    ),
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
   {
-    sortable: false,
+    disableColumnMenu: true,
     field: "description",
-    headerName: "Image",
+    headerName: "Description",
+    minWidth: 220,
     headerAlign: "center",
     align: "center",
-    width: 200,
-    editable: false,
-    disableColumnMenu: true,
-    headerClassName: "text-black font-semibold border ",
-    cellClassName: "text-slate-700 font-normal border",
-    renderHeader: (params) => <span className="ps-10">Description</span>,
-  },
-  {
     sortable: false,
-    field: "image",
-    headerName: "Image",
-    headerAlign: "center",
-    align: "center",
-    width: 200,
-    editable: false,
-    disableColumnMenu: true,
-    headerClassName: "text-black font-semibold border ",
-    cellClassName: "text-slate-700 font-normal border",
-    renderHeader: (params) => <span className="ps-10">Image</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
-
   {
+    disableColumnMenu: true,
     field: "action",
     headerName: "Action",
+    width: config.actionWidth || 320,
     headerAlign: "center",
-    editable: false,
+    align: "center",
+    sortable: false,
     headerClassName: "text-black font-semibold text-center",
     cellClassName: "text-slate-700 font-normal",
-    sortable: false,
-    width: 400,
-    renderHeader: (params) => <span>Action</span>,
-    renderCell: (params) => {
-      return (
-        <div className="flex justify-center items-center space-x-2 h-full pt-2">
-          <button
-            onClick={() => handleImageUpload(params.row)}
-            className="flex items-center bg-green-500 hover:bg-green-600 text-white px-4 h-9 rounded-md"
-          >
-            <FaImage className="mr-2" />
-            Image
-          </button>
-          <button
-            onClick={() => handleEdit(params.row)}
-            className="flex items-center bg-blue-500 text-white px-4 h-9 rounded-md "
-          >
-            <FaEdit className="mr-2" />
-            Edit
-          </button>
-
-          <button
-            onClick={() => handleDelete(params.row)}
-            className="flex items-center bg-red-500 text-white px-4   h-9 rounded-md"
-          >
-            <FaTrashAlt className="mr-2" />
-            Delete
-          </button>
-          <button
-            onClick={() => handleProductView(params.row)}
-            className="flex items-center bg-slate-800 text-white px-4   h-9 rounded-md"
-          >
-            <FaEye className="mr-2" />
-            View
-          </button>
-        </div>
-      );
-    },
+    renderCell: (params) => (
+      <div className="flex h-full items-center justify-center space-x-2 pt-2">
+        {config.handleApprove &&
+          renderActionButton(
+            () => config.handleApprove(params.row),
+            FaCheckCircle,
+            "Approve",
+            "bg-emerald-600 hover:bg-emerald-700"
+          )}
+        {config.handleImageUpload &&
+          renderActionButton(
+            () => config.handleImageUpload(params.row),
+            FaImage,
+            "Image",
+            "bg-green-500 hover:bg-green-600"
+          )}
+        {config.handleEdit &&
+          renderActionButton(
+            () => config.handleEdit(params.row),
+            FaEdit,
+            "Edit",
+            "bg-blue-500 hover:bg-blue-600"
+          )}
+        {config.handleDelete &&
+          renderActionButton(
+            () => config.handleDelete(params.row),
+            FaTrashAlt,
+            "Delete",
+            "bg-red-500 hover:bg-red-600"
+          )}
+        {config.handleProductView &&
+          renderActionButton(
+            () => config.handleProductView(params.row),
+            FaEye,
+            "View",
+            "bg-slate-800 hover:bg-slate-900"
+          )}
+      </div>
+    ),
   },
 ];
 
+export const adminModerationProductTableColumn = (handleApprove, handleDelete, handleProductView) =>
+  buildProductColumns({
+    handleApprove,
+    handleDelete,
+    handleProductView,
+    actionWidth: 360,
+  });
 
-export const adminOrderTableColumn = (handleEdit, handleView) => [
-  { 
+export const sellerProductTableColumn = (handleEdit, handleDelete, handleImageUpload, handleProductView) =>
+  buildProductColumns({
+    handleEdit,
+    handleDelete,
+    handleImageUpload,
+    handleProductView,
+    actionWidth: 420,
+  });
+
+export const adminOrderTableColumn = (handleEdit, handleView, allowEdit = true) => [
+  {
     sortable: false,
     disableColumnMenu: true,
     field: "id",
-    headerName: "orderId",
+    headerName: "Order ID",
     minWidth: 180,
     headerAlign: "center",
-    editable: false,
-    headerClassName: "text-black font-semibold border",
-    cellClassName: "text-slate-700 font-normal border",
-    renderHeader: (params) => <span className='text-center'>Order ID</span>
-   },
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
+  },
   {
-    // Column for customer email.
     disableColumnMenu: true,
     field: "email",
     headerName: "Email",
     align: "center",
     width: 250,
-    editable: false,
     sortable: false,
     headerAlign: "center",
-    headerClassName: "text-black font-semibold text-center border ",
-    cellClassName: "text-slate-700 font-normal border text-center",
-    renderHeader: (params) => <span>Email</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
   {
-    // Column for showing total amount of the order.
     disableColumnMenu: true,
     field: "totalAmount",
     headerName: "Total Amount",
     align: "center",
-    width: 200,
-    editable: false,
-    sortable: true,
+    width: 180,
     headerAlign: "center",
-    headerClassName: "text-black font-semibold text-center border ",
-    cellClassName: "text-slate-700 font-normal border text-center",
-    renderHeader: (params) => <span>Total Amount</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
   {
-    // Column to display order status (e.g., Pending, Shipped).
     disableColumnMenu: true,
     field: "status",
     headerName: "Status",
     align: "center",
-    width: 200,
-    editable: false,
+    width: 180,
     sortable: false,
     headerAlign: "center",
-    headerClassName: "text-black font-semibold text-center border ",
-    cellClassName: "text-slate-700 font-normal border text-center",
-    renderHeader: (params) => <span>Status</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
   {
-    // Column for order creation date.
     disableColumnMenu: true,
     field: "date",
     headerName: "Order Date",
     align: "center",
-    width: 200,
-    editable: false,
+    width: 180,
     sortable: false,
     headerAlign: "center",
-    headerClassName: "text-black font-semibold text-center border ",
-    cellClassName: "text-slate-700 font-normal border text-center",
-    renderHeader: (params) => <span>Order Date</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
   {
-    // Custom action column with an "Edit" button.
     field: "action",
     headerName: "Action",
     headerAlign: "center",
-    editable: false,
+    sortable: false,
+    width: allowEdit ? (handleView ? 360 : 240) : 180,
     headerClassName: "text-black font-semibold text-center",
     cellClassName: "text-slate-700 font-normal",
-    sortable: false,
-    width: handleView ? 360 : 250,
-    renderHeader: (params) => <span>Action</span>,
-    renderCell: (params) => {
-      return (
-        <div className='flex justify-center items-center space-x-2 h-full pt-2'>
-          <button
-            onClick={() => handleEdit(params.row)}
-            className='flex items-center bg-blue-500 text-white px-4 h-9 rounded-md'>
-              <FaEdit className='mr-2'/>
-              Edit
-          </button>
-          {handleView && (
-            <button
-              onClick={() => handleView(params.row)}
-              className='flex items-center bg-slate-800 text-white px-4 h-9 rounded-md'>
-                <FaEye className='mr-2'/>
-                View
-            </button>
+    renderCell: (params) => (
+      <div className="flex h-full items-center justify-center space-x-2 pt-2">
+        {allowEdit &&
+          renderActionButton(
+            () => handleEdit(params.row),
+            FaEdit,
+            "Edit",
+            "bg-blue-500 hover:bg-blue-600"
           )}
-        </div>
-      );
-    },
+        {handleView &&
+          renderActionButton(
+            () => handleView(params.row),
+            FaEye,
+            "View",
+            "bg-slate-800 hover:bg-slate-900"
+          )}
+      </div>
+    ),
   },
 ];
 
-
-//table column for categories in admin panel
 export const categoryTableColumns = (handleEdit, handleDelete) => [
   {
     sortable: false,
     disableColumnMenu: true,
     field: "id",
-    headerName: "CategoryId",
-    minWidth: 300,
+    headerName: "Category ID",
+    minWidth: 280,
     headerAlign: "center",
     align: "center",
-    editable: false,
-    headerClassName: "text-black font-semibold border",
-    cellClassName: "text-slate-700 font-normal border",
-    renderHeader: (params) => <span className="text-center">CategoryId</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
   {
     disableColumnMenu: true,
     field: "categoryName",
     headerName: "Category Name",
     align: "center",
-    width: 400,
-    editable: false,
+    width: 380,
     sortable: false,
     headerAlign: "center",
-    headerClassName: "text-black font-semibold text-center border ",
-    cellClassName: "text-slate-700 font-normal border text-center",
-    renderHeader: (params) => <span>Category Name</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
-
   {
     field: "action",
     headerName: "Action",
     headerAlign: "center",
-    editable: false,
+    sortable: false,
+    width: 320,
     headerClassName: "text-black font-semibold text-center",
     cellClassName: "text-slate-700 font-normal",
-    sortable: false,
-    width: 400,
-    renderHeader: (params) => <span>Action</span>,
-    renderCell: (params) => {
-      return (
-        <div className="flex justify-center space-x-2 h-full pt-2">
-          <button
-            onClick={() => handleEdit(params.row)}
-            className="flex items-center bg-blue-500 text-white px-4 h-9 rounded-md "
-          >
-            <FaEdit className="mr-2" />
-            Edit
-          </button>
-
-          {/* Delete Button */}
-          <button
-            onClick={() => handleDelete(params.row)}
-            className="flex items-center bg-red-500 text-white px-4   h-9 rounded-md"
-          >
-            <FaTrashAlt className="mr-2" />
-            Delete
-          </button>
-        </div>
-      );
-    },
+    renderCell: (params) => (
+      <div className="flex justify-center space-x-2 h-full pt-2">
+        {renderActionButton(() => handleEdit(params.row), FaEdit, "Edit", "bg-blue-500 hover:bg-blue-600")}
+        {renderActionButton(
+          () => handleDelete(params.row),
+          FaTrashAlt,
+          "Delete",
+          "bg-red-500 hover:bg-red-600"
+        )}
+      </div>
+    ),
   },
 ];
 
-
-//table column for seller in admin panel
-export const sellerTableColumns = [
+export const sellerTableColumns = (handleApprove, handleActivation) => [
   {
     disableColumnMenu: true,
     field: "id",
-    headerName: "ID",
-    minWidth: 400,
+    headerName: "Seller ID",
+    minWidth: 160,
     headerAlign: "center",
     align: "center",
-    editable: false,
-
-    headerClassName: "text-black font-semibold border",
-    cellClassName: "text-slate-700 font-normal border",
-    renderHeader: (params) => <span className="text-center">SellerID</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
   },
   {
     disableColumnMenu: true,
     field: "username",
-    headerName: "UserName",
-    minWidth: 400,
+    headerName: "Username",
+    minWidth: 180,
     headerAlign: "center",
     align: "center",
-    editable: false,
     sortable: false,
-    headerClassName: "text-black font-semibold border",
-    cellClassName: "text-slate-700 font-normal border",
-    renderHeader: (params) => <span className="text-center">UserName</span>,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
+  },
+  {
+    disableColumnMenu: true,
+    field: "storeName",
+    headerName: "Store",
+    minWidth: 200,
+    headerAlign: "center",
+    align: "center",
+    sortable: false,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
+  },
+  {
+    disableColumnMenu: true,
+    field: "sellerApproved",
+    headerName: "Approved",
+    width: 140,
+    headerAlign: "center",
+    align: "center",
+    sortable: false,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
+    renderCell: (params) => (params.row.sellerApproved ? "Yes" : "No"),
+  },
+  {
+    disableColumnMenu: true,
+    field: "sellerActive",
+    headerName: "Active",
+    width: 140,
+    headerAlign: "center",
+    align: "center",
+    sortable: false,
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
+    renderCell: (params) => (params.row.sellerActive ? "Yes" : "No"),
   },
   {
     disableColumnMenu: true,
     field: "email",
     headerName: "Email",
     align: "center",
-    width: 400,
-    editable: false,
+    width: 260,
     sortable: false,
     headerAlign: "center",
-    headerClassName: "text-black font-semibold text-center border ",
-    cellClassName: "text-slate-700 font-normal border text-center",
-    renderHeader: (params) => <span>Email</span>,
-    renderCell: (params) => {
-      return (
-        <div className="flex items-center justify-center gap-1">
-          <span>
-            <MdOutlineEmail className="text-slate-700 text-lg" />
-          </span>
-          <span>{params?.row?.email}</span>
-        </div>
-      );
-    },
+    headerClassName: baseHeaderClasses,
+    cellClassName: baseCellClasses,
+    renderCell: (params) => (
+      <div className="flex items-center justify-center gap-1">
+        <MdOutlineEmail className="text-slate-700 text-lg" />
+        <span>{params?.row?.email}</span>
+      </div>
+    ),
+  },
+  {
+    disableColumnMenu: true,
+    field: "action",
+    headerName: "Action",
+    width: 340,
+    headerAlign: "center",
+    align: "center",
+    sortable: false,
+    headerClassName: "text-black font-semibold text-center",
+    cellClassName: "text-slate-700 font-normal",
+    renderCell: (params) => (
+      <div className="flex h-full items-center justify-center space-x-2 pt-2">
+        {renderActionButton(
+          () => handleApprove(params.row),
+          FaCheckCircle,
+          params.row.sellerApproved ? "Reconfirm" : "Approve",
+          "bg-emerald-600 hover:bg-emerald-700"
+        )}
+        {renderActionButton(
+          () => handleActivation(params.row),
+          params.row.sellerActive ? FaPauseCircle : FaPlayCircle,
+          params.row.sellerActive ? "Deactivate" : "Activate",
+          params.row.sellerActive ? "bg-amber-600 hover:bg-amber-700" : "bg-blue-600 hover:bg-blue-700"
+        )}
+      </div>
+    ),
   },
 ];

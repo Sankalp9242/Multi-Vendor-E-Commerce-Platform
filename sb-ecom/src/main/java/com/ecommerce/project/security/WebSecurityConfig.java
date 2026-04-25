@@ -1,8 +1,10 @@
 package com.ecommerce.project.security;
 
 import com.ecommerce.project.model.AppRole;
+import com.ecommerce.project.model.Product;
 import com.ecommerce.project.model.Role;
 import com.ecommerce.project.model.User;
+import com.ecommerce.project.repositories.ProductRepository;
 import com.ecommerce.project.repositories.RoleRepository;
 import com.ecommerce.project.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,7 +86,7 @@ public class WebSecurityConfig {
                                 .requestMatchers("/h2-console/**").permitAll()
                                 .requestMatchers("/api/order/stripe-webhook").permitAll()
                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                                .requestMatchers("/api/seller/**").hasAnyRole("ADMIN","SELLER")
+                                .requestMatchers("/api/seller/**").hasRole("SELLER")
                                 //.requestMatchers("/api/admin/**").permitAll()
                                 .requestMatchers("/api/public/**").permitAll()
                                 .requestMatchers("/swagger-ui/**").permitAll()
@@ -115,7 +117,7 @@ public class WebSecurityConfig {
 
 
     @Bean
-    public CommandLineRunner initData(RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public CommandLineRunner initData(RoleRepository roleRepository, UserRepository userRepository, ProductRepository productRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             // Retrieve or create roles
             Role userRole = roleRepository.findByRoleName(AppRole.ROLE_USER)
@@ -138,7 +140,7 @@ public class WebSecurityConfig {
 
             Set<Role> userRoles = Set.of(userRole);
             Set<Role> sellerRoles = Set.of(sellerRole);
-            Set<Role> adminRoles = Set.of(userRole, sellerRole, adminRole);
+            Set<Role> adminRoles = Set.of(adminRole);
 
 
             // Create users if not already present
@@ -149,6 +151,9 @@ public class WebSecurityConfig {
 
             if (!userRepository.existsByUserName("seller1")) {
                 User seller1 = new User("seller1", "seller1@example.com", passwordEncoder.encode("password2"));
+                seller1.setSellerApproved(true);
+                seller1.setSellerActive(true);
+                seller1.setStoreName("Seller One");
                 userRepository.save(seller1);
             }
 
@@ -165,6 +170,11 @@ public class WebSecurityConfig {
 
             userRepository.findByUserName("seller1").ifPresent(seller -> {
                 seller.setRoles(sellerRoles);
+                seller.setSellerApproved(true);
+                seller.setSellerActive(true);
+                if (seller.getStoreName() == null) {
+                    seller.setStoreName("Seller One");
+                }
                 userRepository.save(seller);
             });
 
@@ -172,6 +182,27 @@ public class WebSecurityConfig {
                 admin.setRoles(adminRoles);
                 userRepository.save(admin);
             });
+
+            User defaultSeller = userRepository.findByEmail("admin-store@example.com")
+                    .orElseGet(() -> {
+                        User seller = new User("adminstore", "admin-store@example.com", passwordEncoder.encode("adminstore123"));
+                        seller.setRoles(sellerRoles);
+                        seller.setSellerApproved(true);
+                        seller.setSellerActive(true);
+                        seller.setStoreName("Admin Store");
+                        seller.setStoreDescription("Default seller for legacy products without seller ownership.");
+                        return userRepository.save(seller);
+                    });
+
+            productRepository.findAll().stream()
+                    .filter(product -> product.getUser() == null)
+                    .forEach(product -> {
+                        product.setUser(defaultSeller);
+                        if (product.getProductStatus() == null) {
+                            product.setProductStatus(com.ecommerce.project.model.ProductStatus.ACTIVE);
+                        }
+                        productRepository.save(product);
+                    });
         };
     }
 

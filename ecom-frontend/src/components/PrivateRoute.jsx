@@ -20,7 +20,7 @@ const PrivateRoute = ({ publicPage = false, adminOnly = false, sellerOnly = fals
     return <Navigate to="/" replace />;
   }
 
-  if (sellerOnly && !isSeller && !isAdmin) {
+  if (sellerOnly && !isSeller) {
     return <Navigate to="/" replace />;
   }
 

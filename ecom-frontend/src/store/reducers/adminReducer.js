@@ -1,5 +1,6 @@
 const initialState = {
     analytics: {},
+    commission: {},
 };
 
 export const adminReducer = (state = initialState, action) => {
@@ -9,9 +10,13 @@ export const adminReducer = (state = initialState, action) => {
                 ...state,
                 analytics: action.payload,
             };
+        case "FETCH_COMMISSION":
+            return {
+                ...state,
+                commission: action.payload,
+            };
             
         default:
             return state;
     }
 };
-

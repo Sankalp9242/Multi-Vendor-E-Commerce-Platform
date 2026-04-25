@@ -9,7 +9,18 @@ import { fetchProductReviews, submitProductReview } from "../../store/actions";
 import toast from "react-hot-toast";
 
 function ProductViewModal({ open, setOpen, product, isAvailable }) {
-  const { id, productName, image, description, price, specialPrice, averageRating, reviewCount } = product;
+  const {
+    id,
+    productName,
+    image,
+    description,
+    price,
+    specialPrice,
+    averageRating,
+    reviewCount,
+    sellerName,
+    productStatus,
+  } = product;
   const dispatch = useDispatch();
   const { productReviews } = useSelector((state) => state.products);
   const { user } = useSelector((state) => state.auth);
@@ -90,6 +101,12 @@ function ProductViewModal({ open, setOpen, product, isAvailable }) {
                 </div>
 
                 <Divider />
+                {(sellerName || productStatus) && (
+                  <div className="space-y-1 text-sm text-slate-500">
+                    {sellerName && <p>Seller: {sellerName}</p>}
+                    {productStatus && <p>Status: {productStatus}</p>}
+                  </div>
+                )}
                 <p>{description}</p>
               </div>
 

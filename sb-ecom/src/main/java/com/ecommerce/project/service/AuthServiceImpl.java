@@ -4,6 +4,7 @@ import com.ecommerce.project.model.AppRole;
 import com.ecommerce.project.model.Role;
 import com.ecommerce.project.model.User;
 import com.ecommerce.project.payload.AuthenticationResult;
+import com.ecommerce.project.payload.SellerStatusUpdateDTO;
 import com.ecommerce.project.payload.UserDTO;
 import com.ecommerce.project.payload.UserResponse;
 import com.ecommerce.project.repositories.RoleRepository;
@@ -101,6 +102,8 @@ public class AuthServiceImpl implements AuthService {
         User user = new User(signUpRequest.getUsername(),
                 signUpRequest.getEmail(),
                 encoder.encode(signUpRequest.getPassword()));
+        user.setStoreName(signUpRequest.getStoreName());
+        user.setStoreDescription(signUpRequest.getStoreDescription());
 
         Set<String> strRoles = signUpRequest.getRole();
         Set<Role> roles = new HashSet<>();
@@ -113,15 +116,13 @@ public class AuthServiceImpl implements AuthService {
             strRoles.forEach(role -> {
                 switch (role) {
                     case "admin":
-                        Role adminRole = roleRepository.findByRoleName(AppRole.ROLE_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(adminRole);
-
-                        break;
+                        throw new RuntimeException("Admin signup is not allowed");
                     case "seller":
                         Role modRole = roleRepository.findByRoleName(AppRole.ROLE_SELLER)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
                         roles.add(modRole);
+                        user.setSellerApproved(false);
+                        user.setSellerActive(true);
 
                         break;
                     default:
@@ -151,6 +152,13 @@ public class AuthServiceImpl implements AuthService {
 
         UserInfoResponse response = new UserInfoResponse(userDetails.getId(),
                 userDetails.getUsername(), roles);
+        User currentUser = userRepository.findByUserName(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        response.setEmail(currentUser.getEmail());
+        response.setSellerApproved(currentUser.getSellerApproved());
+        response.setSellerActive(currentUser.getSellerActive());
+        response.setStoreName(currentUser.getStoreName());
+        response.setStoreDescription(currentUser.getStoreDescription());
 
         return response;
     }
@@ -176,6 +184,23 @@ public class AuthServiceImpl implements AuthService {
         response.setTotalPages(allUsers.getTotalPages());
         response.setLastPage(allUsers.isLast());
         return response;
+    }
+
+    @Override
+    public UserDTO updateSellerStatus(Long sellerId, SellerStatusUpdateDTO sellerStatusUpdateDTO) {
+        User seller = userRepository.findById(sellerId)
+                .orElseThrow(() -> new RuntimeException("Seller not found"));
+        boolean isSeller = seller.getRoles().stream().anyMatch(role -> role.getRoleName() == AppRole.ROLE_SELLER);
+        if (!isSeller) {
+            throw new RuntimeException("User is not a seller");
+        }
+        if (sellerStatusUpdateDTO.getSellerApproved() != null) {
+            seller.setSellerApproved(sellerStatusUpdateDTO.getSellerApproved());
+        }
+        if (sellerStatusUpdateDTO.getSellerActive() != null) {
+            seller.setSellerActive(sellerStatusUpdateDTO.getSellerActive());
+        }
+        return modelMapper.map(userRepository.save(seller), UserDTO.class);
     }
 
 

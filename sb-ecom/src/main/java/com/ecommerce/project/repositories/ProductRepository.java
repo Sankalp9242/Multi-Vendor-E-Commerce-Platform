@@ -2,6 +2,7 @@ package com.ecommerce.project.repositories;
 
 import com.ecommerce.project.model.Category;
 import com.ecommerce.project.model.Product;
+import com.ecommerce.project.model.ProductStatus;
 import com.ecommerce.project.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,5 +18,13 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Page<Product> findByUser(User user, Pageable pageDetails);
 
+    Page<Product> findByUserAndProductStatus(User user, ProductStatus productStatus, Pageable pageable);
+
+    long countByProductStatus(ProductStatus productStatus);
+
+    java.util.List<Product> findTop5ByProductStatusOrderByProductIdAsc(ProductStatus productStatus);
+
     long countByUserUserId(Long userId);
+
+    long countByUserUserIdAndProductStatus(Long userId, ProductStatus productStatus);
 }

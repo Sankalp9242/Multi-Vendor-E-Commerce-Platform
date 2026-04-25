@@ -14,4 +14,11 @@ public class AnalyticsResponse {
     private String pendingOrders;
     private String deliveredOrders;
     private String soldUnits;
+    private String sellerCount;
+    private String pendingProductApprovals;
+    private String grossSales;
+    private String sellerEarnings;
+    private String commissionPercentage;
+    private java.util.List<com.ecommerce.project.payload.OrderDTO> recentOrders;
+    private java.util.List<com.ecommerce.project.payload.ProductDTO> pendingProducts;
 }

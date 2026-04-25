@@ -5,6 +5,7 @@ import com.ecommerce.project.exceptions.ResourceNotFoundException;
 import com.ecommerce.project.model.Cart;
 import com.ecommerce.project.model.Category;
 import com.ecommerce.project.model.Product;
+import com.ecommerce.project.model.ProductStatus;
 import com.ecommerce.project.model.User;
 import com.ecommerce.project.payload.CartDTO;
 import com.ecommerce.project.payload.ProductDTO;
@@ -62,7 +63,7 @@ public class ProductServiceImpl implements ProductService {
     private String imageBaseUrl;
 
     @Override
-    public ProductDTO addProduct(Long categoryId, ProductDTO productDTO) {
+    public ProductDTO addProductBySeller(Long categoryId, ProductDTO productDTO) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Category", "categoryId", categoryId));
@@ -78,15 +79,20 @@ public class ProductServiceImpl implements ProductService {
         }
 
         if (isProductNotPresent) {
+            User seller = authUtil.loggedInUser();
+            if (Boolean.FALSE.equals(seller.getSellerActive()) || Boolean.FALSE.equals(seller.getSellerApproved())) {
+                throw new APIException("Seller is not approved or active");
+            }
             Product product = modelMapper.map(productDTO, Product.class);
             product.setImage("default.png");
             product.setCategory(category);
-            product.setUser(authUtil.loggedInUser());
+            product.setUser(seller);
+            product.setProductStatus(ProductStatus.PENDING);
             double specialPrice = product.getPrice() -
                     ((product.getDiscount() * 0.01) * product.getPrice());
             product.setSpecialPrice(specialPrice);
             Product savedProduct = productRepository.save(product);
-            return modelMapper.map(savedProduct, ProductDTO.class);
+            return mapProductToDto(savedProduct);
         } else {
             throw new APIException("Product already exist!!");
         }
@@ -109,6 +115,8 @@ public class ProductServiceImpl implements ProductService {
             spec = spec.and((root, query, criteriaBuilder) ->
                     criteriaBuilder.like(root.get("category").get("categoryName"), category));
         }
+        spec = spec.and((root, query, criteriaBuilder) ->
+                criteriaBuilder.equal(root.get("productStatus"), ProductStatus.ACTIVE));
 
         Page<Product> pageProducts = productRepository.findAll(spec, pageDetails);
 
@@ -253,9 +261,10 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductDTO updateProduct(Long productId, ProductDTO productDTO) {
+    public ProductDTO updateProductBySeller(Long productId, ProductDTO productDTO) {
         Product productFromDb = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        validateSellerOwnership(productFromDb);
 
         Product product = modelMapper.map(productDTO, Product.class);
 
@@ -265,6 +274,7 @@ public class ProductServiceImpl implements ProductService {
         productFromDb.setDiscount(product.getDiscount());
         productFromDb.setPrice(product.getPrice());
         productFromDb.setSpecialPrice(product.getSpecialPrice());
+        productFromDb.setProductStatus(ProductStatus.PENDING);
 
         Product savedProduct = productRepository.save(productFromDb);
 
@@ -284,38 +294,60 @@ public class ProductServiceImpl implements ProductService {
 
         cartDTOs.forEach(cart -> cartService.updateProductInCarts(cart.getCartId(), productId));
 
-        return modelMapper.map(savedProduct, ProductDTO.class);
+        return mapProductToDto(savedProduct);
     }
 
     @Override
-    public ProductDTO deleteProduct(Long productId) {
+    public ProductDTO deleteProductBySeller(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        validateSellerOwnership(product);
 
         // DELETE
         List<Cart> carts = cartRepository.findCartsByProductId(productId);
         carts.forEach(cart -> cartService.deleteProductFromCart(cart.getCartId(), productId));
 
         productRepository.delete(product);
-        return modelMapper.map(product, ProductDTO.class);
+        return mapProductToDto(product);
     }
 
     @Override
-    public ProductDTO updateProductImage(Long productId, MultipartFile image) throws IOException {
+    public ProductDTO updateProductImageBySeller(Long productId, MultipartFile image) throws IOException {
         Product productFromDb = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        validateSellerOwnership(productFromDb);
 
         String fileName = fileService.uploadImage(path, image);
         productFromDb.setImage(fileName);
+        productFromDb.setProductStatus(ProductStatus.PENDING);
 
         Product updatedProduct = productRepository.save(productFromDb);
-        return modelMapper.map(updatedProduct, ProductDTO.class);
+        return mapProductToDto(updatedProduct);
     }
 
     @Override
     public ProductDTO getProductById(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        if (product.getProductStatus() != ProductStatus.ACTIVE) {
+            throw new ResourceNotFoundException("Product", "productId", productId);
+        }
+        return mapProductToDto(product);
+    }
+
+    @Override
+    public ProductDTO approveProduct(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        product.setProductStatus(ProductStatus.ACTIVE);
+        return mapProductToDto(productRepository.save(product));
+    }
+
+    @Override
+    public ProductDTO deleteProductForModeration(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        productRepository.delete(product);
         return mapProductToDto(product);
     }
 
@@ -324,7 +356,20 @@ public class ProductServiceImpl implements ProductService {
         productDTO.setImage(constructImageUrl(product.getImage()));
         productDTO.setAverageRating(reviewRepository.getAverageRatingByProductId(product.getProductId()));
         productDTO.setReviewCount(reviewRepository.countByProductProductId(product.getProductId()));
+        if (product.getUser() != null) {
+            productDTO.setSellerId(product.getUser().getUserId());
+            productDTO.setSellerName(product.getUser().getStoreName() != null
+                    ? product.getUser().getStoreName()
+                    : product.getUser().getUserName());
+        }
         return productDTO;
+    }
+
+    private void validateSellerOwnership(Product product) {
+        User seller = authUtil.loggedInUser();
+        if (product.getUser() == null || !product.getUser().getUserId().equals(seller.getUserId())) {
+            throw new APIException("You can manage only your own products");
+        }
     }
 
 

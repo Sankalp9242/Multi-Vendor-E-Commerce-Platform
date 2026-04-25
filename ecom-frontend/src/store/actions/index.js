@@ -430,6 +430,40 @@ export const analyticsAction = (isAdmin = true) => async (dispatch) => {
         }
 };
 
+export const fetchCommissionSettings = () => async (dispatch) => {
+    try {
+        const { data } = await api.get("/admin/commission");
+        dispatch({
+            type: "FETCH_COMMISSION",
+            payload: data,
+        });
+    } catch (error) {
+        dispatch({
+            type: "IS_ERROR",
+            payload: error?.response?.data?.message || "Failed to fetch commission settings",
+        });
+    }
+};
+
+export const updateCommissionSettings =
+    (commissionPercentage, toast, setLoader) => async (dispatch) => {
+        try {
+            setLoader?.(true);
+            const { data } = await api.put("/admin/commission", {
+                commissionPercentage: Number(commissionPercentage),
+            });
+            dispatch({
+                type: "FETCH_COMMISSION",
+                payload: data,
+            });
+            toast.success("Commission updated successfully");
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Failed to update commission");
+        } finally {
+            setLoader?.(false);
+        }
+    };
+
 export const getOrdersForDashboard = (queryString, isAdmin) => async (dispatch) => {
     try {
         dispatch({ type: "IS_FETCHING" });
@@ -482,15 +516,31 @@ export const dashboardProductsAction = (queryString, isAdmin) => async (dispatch
         dispatch({ type: "IS_FETCHING" });
         const endpoint = isAdmin ? "/admin/products" : "/seller/products";
         const { data } = await api.get(`${endpoint}?${queryString}`);
-        dispatch({
-            type: "FETCH_PRODUCTS",
-            payload: data.content,
-            pageNumber: data.pageNumber,
-            pageSize: data.pageSize,
-            totalElements: data.totalElements,
-            totalPages: data.totalPages,
-            lastPage: data.lastPage,
-        });
+        const actionType = isAdmin ? "FETCH_PRODUCTS" : "FETCH_SELLER_PRODUCTS";
+        const payload = isAdmin
+            ? {
+                type: actionType,
+                payload: data.content,
+                pageNumber: data.pageNumber,
+                pageSize: data.pageSize,
+                totalElements: data.totalElements,
+                totalPages: data.totalPages,
+                lastPage: data.lastPage,
+            }
+            : {
+                type: actionType,
+                payload: {
+                    products: data.content,
+                    pagination: {
+                        pageNumber: data.pageNumber,
+                        pageSize: data.pageSize,
+                        totalElements: data.totalElements,
+                        totalPages: data.totalPages,
+                        lastPage: data.lastPage,
+                    },
+                },
+            };
+        dispatch(payload);
         dispatch({ type: "IS_SUCCESS" });
     } catch (error) {
         console.log(error);
@@ -506,22 +556,34 @@ export const updateProductFromDashboard =
     (sendData, toast, reset, setLoader, setOpen, isAdmin) => async (dispatch) => {
     try {
         setLoader(true);
-        const endpoint = isAdmin ? "/admin/products/" : "/seller/products/";
-        await api.put(`${endpoint}${sendData.id}`, sendData);
-        toast.success("Product update successful");
+        if (isAdmin) {
+            throw new Error("Admin cannot update seller inventory directly");
+        }
+        await api.put(`/seller/products/${sendData.id}`, sendData);
+        toast.success("Product updated and sent for approval");
         reset();
         setOpen(false);
-        if (isAdmin) {
-            await dispatch(dashboardProductsAction("", true));
-        } else {
-            await dispatch(fetchSellerProducts());
-        }
+        await dispatch(fetchSellerProducts());
     } catch (error) {
-        toast.error(error?.response?.data?.message || "Product update failed");
+        toast.error(error?.response?.data?.message || error?.message || "Product update failed");
     } finally {
         setLoader(false);
     }
 };
+
+export const approveProductFromDashboard =
+    (productId, toast, setLoader) => async (dispatch) => {
+        try {
+            setLoader?.(true);
+            await api.put(`/admin/products/${productId}/approve`);
+            toast.success("Product approved successfully");
+            await dispatch(dashboardProductsAction("", true));
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Failed to approve product");
+        } finally {
+            setLoader?.(false);
+        }
+    };
 
 
 
@@ -529,21 +591,19 @@ export const addNewProductFromDashboard =
     (sendData, toast, reset, setLoader, setOpen, isAdmin) => async(dispatch) => {
         try {
             setLoader(true);
-            const endpoint = isAdmin ? "/admin/categories/" : "/seller/categories/";
-            await api.post(`${endpoint}${sendData.categoryId}/product`,
+            if (isAdmin) {
+                throw new Error("Admin cannot create products");
+            }
+            await api.post(`/seller/categories/${sendData.categoryId}/product`,
                 sendData
             );
-            toast.success("Product created successfully");
+            toast.success("Product created and sent for approval");
             reset();
             setOpen(false);
-            if (isAdmin) {
-                await dispatch(dashboardProductsAction("", true));
-            } else {
-                await dispatch(fetchSellerProducts());
-            }
+            await dispatch(fetchSellerProducts());
         } catch (error) {
             console.error(error);
-            toast.error(error?.response?.data?.message || "Product creation failed");
+            toast.error(error?.response?.data?.message || error?.message || "Product creation failed");
         } finally {
             setLoader(false);
         }
@@ -577,17 +637,15 @@ export const updateProductImageFromDashboard =
     (formData, productId, toast, setLoader, setOpen, isAdmin) => async (dispatch) => {
     try {
         setLoader(true);
-        const endpoint = isAdmin ? "/admin/products/" : "/seller/products/";
-        await api.put(`${endpoint}${productId}/image`, formData);
-        toast.success("Image upload successful");
-        setOpen(false);
         if (isAdmin) {
-            await dispatch(dashboardProductsAction("", true));
-        } else {
-            await dispatch(fetchSellerProducts());
+            throw new Error("Admin cannot update seller inventory directly");
         }
+        await api.put(`/seller/products/${productId}/image`, formData);
+        toast.success("Image uploaded and product sent for approval");
+        setOpen(false);
+        await dispatch(fetchSellerProducts());
     } catch (error) {
-        toast.error(error?.response?.data?.message || "Product Image upload failed");
+        toast.error(error?.response?.data?.message || error?.message || "Product Image upload failed");
     } finally {
         setLoader(false);
     }
@@ -693,10 +751,9 @@ export const deleteCategoryDashboardAction =
 
   export const getAllSellersDashboard =
   (queryString) => async (dispatch, getState) => {
-    const { user } = getState().auth;
     try {
       dispatch({ type: "IS_FETCHING" });
-      const { data } = await api.get(`/auth/sellers?${queryString}`);
+      const { data } = await api.get(`/admin/sellers?${queryString}`);
       dispatch({
         type: "GET_SELLERS",
         payload: data["content"],
@@ -721,9 +778,12 @@ export const addNewDashboardSeller =
   (sendData, toast, reset, setOpen, setLoader) => async (dispatch) => {
     try {
       setLoader(true);
-      await api.post("/auth/signup", sendData);
+      await api.post("/auth/signup", {
+        ...sendData,
+        role: ["seller"],
+      });
       reset();
-      toast.success("Seller registered successfully!");
+      toast.success("Seller created successfully. Approval can be managed from the seller list.");
 
       await dispatch(getAllSellersDashboard());
     } catch (err) {
@@ -736,6 +796,21 @@ export const addNewDashboardSeller =
     } finally {
       setLoader(false);
       setOpen(false);
+    }
+  };
+
+export const updateSellerStatusDashboard =
+  (sellerId, statusData, toast, setLoader) => async (dispatch) => {
+    try {
+      setLoader?.(true);
+      await api.put(`/admin/sellers/${sellerId}/status`, statusData);
+      toast.success("Seller status updated successfully");
+      await dispatch(getAllSellersDashboard());
+    } catch (err) {
+      console.log(err);
+      toast.error(err?.response?.data?.message || "Failed to update seller status");
+    } finally {
+      setLoader?.(false);
     }
   };
 
