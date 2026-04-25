@@ -91,11 +91,9 @@ const PaymentConfirmation = () => {
     redirectStatus,
     selectedUserCheckoutAddress,
     userAddresses,
-    cart,
     processedPaymentIntent,
     dispatch,
     addressesRequested,
-    userAddresses.length,
   ]);
 
   return (
