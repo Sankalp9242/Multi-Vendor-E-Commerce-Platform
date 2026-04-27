@@ -16,7 +16,7 @@ const SellerDashboard = () => {
 
   useEffect(() => {
     dispatch(analyticsAction(false));
-    dispatch(fetchSellerOrders("pageNumber=0&pageSize=5"));
+    dispatch(fetchSellerOrders("pageNumber=0&pageSize=5&sortBy=orderDate&sortOrder=desc"));
   }, [dispatch]);
 
   const cards = useMemo(

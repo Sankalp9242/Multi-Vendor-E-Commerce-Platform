@@ -28,7 +28,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("""
         SELECT COALESCE(SUM(oi.quantity * oi.orderedProductPrice), 0) FROM Order o
         JOIN o.orderItems oi
-        WHERE oi.product.user.userId = :sellerId""")
+        WHERE oi.product.user.userId = :sellerId
+        AND UPPER(o.orderStatus) <> 'CANCELLED'""")
     Double getRevenueBySeller(@Param("sellerId") Long sellerId);
 
     @Query("""
@@ -41,7 +42,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("""
         SELECT COALESCE(SUM(oi.quantity), 0) FROM Order o
         JOIN o.orderItems oi
-        WHERE oi.product.user.userId = :sellerId""")
+        WHERE oi.product.user.userId = :sellerId
+        AND UPPER(o.orderStatus) <> 'CANCELLED'""")
     Long getSoldUnitsBySeller(@Param("sellerId") Long sellerId);
 
     @Query("""
