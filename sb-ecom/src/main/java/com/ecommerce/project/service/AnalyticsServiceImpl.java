@@ -39,15 +39,15 @@ public class AnalyticsServiceImpl implements AnalyticsService{
     public AnalyticsResponse getAnalyticsData() {
         AnalyticsResponse response = new AnalyticsResponse();
 
-        long productCount = productRepository.count();
+        long productCount = productRepository.countByDeletedFalse();
         long sellerCount = userRepository.countByRolesRoleName(com.ecommerce.project.model.AppRole.ROLE_SELLER);
         long totalOrders = orderRepository.count();
         Double totalRevenue = orderRepository.getTotalRevenue();
-        long pendingProductApprovals = productRepository.countByProductStatus(ProductStatus.PENDING);
+        long pendingProductApprovals = productRepository.countByProductStatusAndDeletedFalse(ProductStatus.PENDING);
         List<OrderDTO> recentOrders = orderRepository.findTop5ByOrderByOrderDateDesc().stream()
                 .map(order -> modelMapper.map(order, OrderDTO.class))
                 .toList();
-        List<ProductDTO> pendingProducts = productRepository.findTop5ByProductStatusOrderByProductIdAsc(ProductStatus.PENDING).stream()
+        List<ProductDTO> pendingProducts = productRepository.findTop5ByProductStatusAndDeletedFalseOrderByProductIdAsc(ProductStatus.PENDING).stream()
                 .map(this::mapProductToDto)
                 .toList();
 
@@ -66,7 +66,7 @@ public class AnalyticsServiceImpl implements AnalyticsService{
     public AnalyticsResponse getSellerAnalyticsData(Long sellerId) {
         AnalyticsResponse response = new AnalyticsResponse();
 
-        long productCount = productRepository.countByUserUserId(sellerId);
+        long productCount = productRepository.countByUserUserIdAndDeletedFalse(sellerId);
         long totalOrders = orderRepository.countOrdersBySeller(sellerId);
         Double totalRevenue = orderRepository.getRevenueBySeller(sellerId);
         long pendingOrders = orderRepository.countOrdersBySellerAndStatus(sellerId, AppConstants.ORDER_STATUS_PENDING);

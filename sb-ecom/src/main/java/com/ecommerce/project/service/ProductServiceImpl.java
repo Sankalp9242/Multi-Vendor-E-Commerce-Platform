@@ -12,6 +12,7 @@ import com.ecommerce.project.payload.ProductDTO;
 import com.ecommerce.project.payload.ProductResponse;
 import com.ecommerce.project.repositories.CartRepository;
 import com.ecommerce.project.repositories.CategoryRepository;
+import com.ecommerce.project.repositories.OrderItemRepository;
 import com.ecommerce.project.repositories.ProductRepository;
 import com.ecommerce.project.repositories.ReviewRepository;
 import com.ecommerce.project.util.AuthUtil;
@@ -46,6 +47,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private ReviewRepository reviewRepository;
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
 
     @Autowired
     private ModelMapper modelMapper;
@@ -117,6 +121,8 @@ public class ProductServiceImpl implements ProductService {
         }
         spec = spec.and((root, query, criteriaBuilder) ->
                 criteriaBuilder.equal(root.get("productStatus"), ProductStatus.ACTIVE));
+        spec = spec.and((root, query, criteriaBuilder) ->
+                criteriaBuilder.isFalse(root.get("deleted")));
 
         Page<Product> pageProducts = productRepository.findAll(spec, pageDetails);
 
@@ -146,7 +152,7 @@ public class ProductServiceImpl implements ProductService {
                 : Sort.by(sortBy).descending();
 
         Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-        Page<Product> pageProducts = productRepository.findAll(pageDetails);
+        Page<Product> pageProducts = productRepository.findByDeletedFalse(pageDetails);
 
         List<Product> products = pageProducts.getContent();
 
@@ -175,7 +181,7 @@ public class ProductServiceImpl implements ProductService {
         Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
 
         User user = authUtil.loggedInUser();
-        Page<Product> pageProducts = productRepository.findByUser(user, pageDetails);
+        Page<Product> pageProducts = productRepository.findByUserAndDeletedFalse(user, pageDetails);
 
         List<Product> products = pageProducts.getContent();
 
@@ -210,7 +216,7 @@ public class ProductServiceImpl implements ProductService {
                 : Sort.by(sortBy).descending();
 
         Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-        Page<Product> pageProducts = productRepository.findByCategoryOrderByPriceAsc(category, pageDetails);
+        Page<Product> pageProducts = productRepository.findByCategoryAndDeletedFalseOrderByPriceAsc(category, pageDetails);
 
         List<Product> products = pageProducts.getContent();
 
@@ -239,7 +245,7 @@ public class ProductServiceImpl implements ProductService {
                 : Sort.by(sortBy).descending();
 
         Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-        Page<Product> pageProducts = productRepository.findByProductNameLikeIgnoreCase('%' + keyword + '%', pageDetails);
+        Page<Product> pageProducts = productRepository.findByProductNameLikeIgnoreCaseAndDeletedFalse('%' + keyword + '%', pageDetails);
 
         List<Product> products = pageProducts.getContent();
         List<ProductDTO> productDTOS = products.stream()
@@ -301,14 +307,12 @@ public class ProductServiceImpl implements ProductService {
     public ProductDTO deleteProductBySeller(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        if (Boolean.TRUE.equals(product.getDeleted())) {
+            throw new ResourceNotFoundException("Product", "productId", productId);
+        }
         validateSellerOwnership(product);
 
-        // DELETE
-        List<Cart> carts = cartRepository.findCartsByProductId(productId);
-        carts.forEach(cart -> cartService.deleteProductFromCart(cart.getCartId(), productId));
-
-        productRepository.delete(product);
-        return mapProductToDto(product);
+        return deleteProductSafely(product);
     }
 
     @Override
@@ -329,6 +333,9 @@ public class ProductServiceImpl implements ProductService {
     public ProductDTO getProductById(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        if (Boolean.TRUE.equals(product.getDeleted())) {
+            throw new ResourceNotFoundException("Product", "productId", productId);
+        }
         if (product.getProductStatus() != ProductStatus.ACTIVE) {
             throw new ResourceNotFoundException("Product", "productId", productId);
         }
@@ -347,8 +354,10 @@ public class ProductServiceImpl implements ProductService {
     public ProductDTO deleteProductForModeration(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
-        productRepository.delete(product);
-        return mapProductToDto(product);
+        if (Boolean.TRUE.equals(product.getDeleted())) {
+            throw new ResourceNotFoundException("Product", "productId", productId);
+        }
+        return deleteProductSafely(product);
     }
 
     private ProductDTO mapProductToDto(Product product) {
@@ -370,6 +379,23 @@ public class ProductServiceImpl implements ProductService {
         if (product.getUser() == null || !product.getUser().getUserId().equals(seller.getUserId())) {
             throw new APIException("You can manage only your own products");
         }
+    }
+
+    private ProductDTO deleteProductSafely(Product product) {
+        Long productId = product.getProductId();
+        List<Cart> carts = cartRepository.findCartsByProductId(productId);
+        carts.forEach(cart -> cartService.deleteProductFromCart(cart.getCartId(), productId));
+
+        if (orderItemRepository.existsByProductProductId(productId)) {
+            product.setDeleted(true);
+            product.setQuantity(0);
+            product.setProductStatus(ProductStatus.PENDING);
+            Product archivedProduct = productRepository.save(product);
+            return mapProductToDto(archivedProduct);
+        }
+
+        productRepository.delete(product);
+        return mapProductToDto(product);
     }
 
 

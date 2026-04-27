@@ -12,19 +12,23 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
-    Page<Product> findByCategoryOrderByPriceAsc(Category category, Pageable pageDetails);
+    Page<Product> findByCategoryAndDeletedFalseOrderByPriceAsc(Category category, Pageable pageDetails);
 
-    Page<Product> findByProductNameLikeIgnoreCase(String keyword, Pageable pageDetails);
+    Page<Product> findByProductNameLikeIgnoreCaseAndDeletedFalse(String keyword, Pageable pageDetails);
 
-    Page<Product> findByUser(User user, Pageable pageDetails);
+    Page<Product> findByUserAndDeletedFalse(User user, Pageable pageDetails);
 
-    Page<Product> findByUserAndProductStatus(User user, ProductStatus productStatus, Pageable pageable);
+    Page<Product> findByUserAndProductStatusAndDeletedFalse(User user, ProductStatus productStatus, Pageable pageable);
 
-    long countByProductStatus(ProductStatus productStatus);
+    long countByProductStatusAndDeletedFalse(ProductStatus productStatus);
 
-    java.util.List<Product> findTop5ByProductStatusOrderByProductIdAsc(ProductStatus productStatus);
+    java.util.List<Product> findTop5ByProductStatusAndDeletedFalseOrderByProductIdAsc(ProductStatus productStatus);
 
-    long countByUserUserId(Long userId);
+    long countByUserUserIdAndDeletedFalse(Long userId);
 
-    long countByUserUserIdAndProductStatus(Long userId, ProductStatus productStatus);
+    long countByUserUserIdAndProductStatusAndDeletedFalse(Long userId, ProductStatus productStatus);
+
+    long countByDeletedFalse();
+
+    Page<Product> findByDeletedFalse(Pageable pageable);
 }

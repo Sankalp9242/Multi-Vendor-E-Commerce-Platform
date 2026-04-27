@@ -22,4 +22,5 @@ public class ProductDTO {
     private Long sellerId;
     private String sellerName;
     private ProductStatus productStatus;
+    private Boolean deleted;
 }

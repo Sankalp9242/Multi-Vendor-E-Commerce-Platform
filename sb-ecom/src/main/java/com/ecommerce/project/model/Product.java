@@ -35,6 +35,8 @@ public class Product {
     private double price;
     private double discount;
     private double specialPrice;
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean deleted = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "varchar(255) default 'ACTIVE'")
