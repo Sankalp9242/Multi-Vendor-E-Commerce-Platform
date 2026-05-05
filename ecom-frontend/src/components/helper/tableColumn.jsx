@@ -4,8 +4,23 @@ import { MdOutlineEmail } from "react-icons/md";
 const baseCellClasses = "text-slate-700 font-normal border text-center";
 const baseHeaderClasses = "text-black font-semibold text-center border";
 
-const renderActionButton = (onClick, Icon, label, className) => (
-  <button onClick={onClick} className={`flex items-center rounded-md px-4 h-9 text-white ${className}`}>
+const getProductStatusBadgeClass = (status) => {
+  switch (status) {
+    case "ACTIVE":
+      return "bg-emerald-100 text-emerald-700";
+    case "PENDING":
+      return "bg-amber-100 text-amber-700";
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+};
+
+const renderActionButton = (onClick, Icon, label, className, disabled = false) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`flex items-center rounded-md px-4 h-9 text-white ${className} ${disabled ? "cursor-not-allowed opacity-70" : ""}`}
+  >
     <Icon className="mr-2" />
     {label}
   </button>
@@ -55,6 +70,17 @@ const buildProductColumns = (config) => [
     sortable: false,
     headerClassName: baseHeaderClasses,
     cellClassName: baseCellClasses,
+    renderCell: (params) => (
+      <div className="flex h-full items-center justify-center">
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${getProductStatusBadgeClass(
+            params.row.productStatus
+          )}`}
+        >
+          {params.row.productStatus || "UNKNOWN"}
+        </span>
+      </div>
+    ),
   },
   {
     disableColumnMenu: true,
@@ -111,10 +137,17 @@ const buildProductColumns = (config) => [
       <div className="flex h-full items-center justify-center space-x-2 pt-2">
         {config.handleApprove &&
           renderActionButton(
-            () => config.handleApprove(params.row),
+            () => {
+              if (params.row.productStatus !== "ACTIVE") {
+                config.handleApprove(params.row);
+              }
+            },
             FaCheckCircle,
-            "Approve",
-            "bg-emerald-600 hover:bg-emerald-700"
+            params.row.productStatus === "ACTIVE" ? "Approved" : "Approve",
+            params.row.productStatus === "ACTIVE"
+              ? "bg-slate-500"
+              : "bg-emerald-600 hover:bg-emerald-700",
+            params.row.productStatus === "ACTIVE"
           )}
         {config.handleImageUpload &&
           renderActionButton(

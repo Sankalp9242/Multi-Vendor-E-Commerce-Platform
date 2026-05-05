@@ -55,4 +55,16 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
+
+    @PrePersist
+    @PreUpdate
+    private void applyDefaults() {
+        if (deleted == null) {
+            deleted = false;
+        }
+
+        if (productStatus == null) {
+            productStatus = ProductStatus.PENDING;
+        }
+    }
 }
