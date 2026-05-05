@@ -843,3 +843,45 @@ export const updateSellerStatusDashboard =
     });
   }
 };
+
+export const fetchUserReports = () => async (dispatch) => {
+  try {
+    dispatch({ type: "IS_FETCHING" });
+    const { data } = await api.get("/user/reports");
+    dispatch({ type: "FETCH_USER_REPORTS", payload: data });
+    dispatch({ type: "IS_SUCCESS" });
+  } catch (error) {
+    dispatch({
+      type: "IS_ERROR",
+      payload: error?.response?.data?.message || "Failed to fetch user reports",
+    });
+  }
+};
+
+export const fetchSellerReports = () => async (dispatch) => {
+  try {
+    dispatch({ type: "IS_FETCHING" });
+    const { data } = await api.get("/seller/reports");
+    dispatch({ type: "FETCH_SELLER_REPORTS", payload: data });
+    dispatch({ type: "IS_SUCCESS" });
+  } catch (error) {
+    dispatch({
+      type: "IS_ERROR",
+      payload: error?.response?.data?.message || "Failed to fetch seller reports",
+    });
+  }
+};
+
+export const fetchAdminReports = () => async (dispatch) => {
+  try {
+    dispatch({ type: "IS_FETCHING" });
+    const { data } = await api.get("/admin/reports");
+    dispatch({ type: "FETCH_ADMIN_REPORTS", payload: data });
+    dispatch({ type: "IS_SUCCESS" });
+  } catch (error) {
+    dispatch({
+      type: "IS_ERROR",
+      payload: error?.response?.data?.message || "Failed to fetch admin reports",
+    });
+  }
+};

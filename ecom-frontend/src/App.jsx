@@ -24,6 +24,9 @@ import UserProfile from "./components/user/UserProfile";
 import SellerDashboard from './components/seller/dashboard/SellerDashboard';
 import SellerOrders from './components/seller/orders/SellerOrders';
 import SellerProducts from './components/seller/products/SellerProducts';
+import UserReports from './components/reports/UserReports';
+import SellerReports from './components/reports/SellerReports';
+import AdminReports from './components/reports/AdminReports';
 
 
 function App() {
@@ -52,6 +55,7 @@ function App() {
     <Route path="/order-confirm" element={<PaymentConfirmation />} />
     <Route path="/profile" element={<UserProfile />} />
     <Route path="/profile/orders" element={<UserOrders />} />
+    <Route path="/profile/reports" element={<UserReports />} />
   </Route>
 
   {/* ADMIN */}
@@ -62,6 +66,7 @@ function App() {
       <Route path="sellers" element={<Sellers />} />
       <Route path="orders" element={<Orders />} />
       <Route path="categories" element={<Category />} />
+      <Route path="reports" element={<AdminReports />} />
     </Route>
   </Route>
 
@@ -70,6 +75,7 @@ function App() {
           <Route index element={<SellerDashboard />} />
           <Route path="products" element={<SellerProducts />} />
           <Route path="orders" element={<SellerOrders />} />
+          <Route path="reports" element={<SellerReports />} />
         </Route>
     </Route>
 

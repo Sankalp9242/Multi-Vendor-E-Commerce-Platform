@@ -55,6 +55,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findOrdersBySeller(@Param("sellerId") Long sellerId, Pageable pageable);
 
     @Query("""
+        SELECT DISTINCT o FROM Order o
+        JOIN o.orderItems oi
+        WHERE oi.product.user.userId = :sellerId
+        ORDER BY o.orderDate DESC, o.orderId DESC""")
+    java.util.List<Order> findAllOrdersBySeller(@Param("sellerId") Long sellerId);
+
+    java.util.List<Order> findAllByEmailOrderByOrderDateDesc(String email);
+
+    java.util.List<Order> findAllByOrderByOrderDateDesc();
+
+    @Query("""
         SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Order o
         JOIN o.orderItems oi
         WHERE o.orderId = :orderId AND oi.product.user.userId = :sellerId""")

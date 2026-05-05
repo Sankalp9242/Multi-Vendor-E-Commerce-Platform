@@ -18,6 +18,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Page<Product> findByUserAndDeletedFalse(User user, Pageable pageDetails);
 
+    java.util.List<Product> findByUserAndDeletedFalse(User user);
+
     Page<Product> findByUserAndProductStatusAndDeletedFalse(User user, ProductStatus productStatus, Pageable pageable);
 
     long countByProductStatusAndDeletedFalse(ProductStatus productStatus);
@@ -31,4 +33,6 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     long countByDeletedFalse();
 
     Page<Product> findByDeletedFalse(Pageable pageable);
+
+    java.util.List<Product> findByDeletedFalse();
 }

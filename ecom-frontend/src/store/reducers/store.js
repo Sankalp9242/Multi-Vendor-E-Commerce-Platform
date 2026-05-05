@@ -9,6 +9,7 @@ import { orderReducer } from "./orderReducer";
 import { sellerReducer } from "./sellerReducer";
 import { sellerOrderReducer } from "./sellerOrderReducer";
 import { sellerProductReducer } from "./sellerProductReducer";
+import { reportReducer } from "./reportReducer";
 
 
 
@@ -41,6 +42,7 @@ export const store = configureStore({
     seller: sellerReducer,
      sellerOrders: sellerOrderReducer,
       sellerProducts: sellerProductReducer,
+      reports: reportReducer,
   },
   preloadedState: initialState,
 });
