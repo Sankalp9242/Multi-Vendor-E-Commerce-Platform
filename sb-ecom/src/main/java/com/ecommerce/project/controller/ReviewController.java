@@ -1,6 +1,7 @@
 package com.ecommerce.project.controller;
 
 import com.ecommerce.project.payload.ReviewDTO;
+import com.ecommerce.project.payload.ReviewEligibilityDTO;
 import com.ecommerce.project.payload.ReviewRequestDTO;
 import com.ecommerce.project.service.ReviewService;
 import jakarta.validation.Valid;
@@ -21,6 +22,11 @@ public class ReviewController {
     @GetMapping("/public/products/{productId}/reviews")
     public ResponseEntity<List<ReviewDTO>> getReviewsForProduct(@PathVariable Long productId) {
         return ResponseEntity.ok(reviewService.getReviewsForProduct(productId));
+    }
+
+    @GetMapping("/products/{productId}/reviews/eligibility")
+    public ResponseEntity<ReviewEligibilityDTO> getReviewEligibility(@PathVariable Long productId) {
+        return ResponseEntity.ok(reviewService.getReviewEligibility(productId));
     }
 
     @PostMapping("/products/{productId}/reviews")

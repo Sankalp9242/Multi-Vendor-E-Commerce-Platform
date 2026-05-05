@@ -5,7 +5,7 @@ import Status from "./Status";
 import { MdClose, MdDone } from "react-icons/md";
 import { FaStar } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchProductReviews, submitProductReview } from "../../store/actions";
+import { fetchProductReviewEligibility, fetchProductReviews, submitProductReview } from "../../store/actions";
 import toast from "react-hot-toast";
 
 function ProductViewModal({ open, setOpen, product, isAvailable }) {
@@ -22,16 +22,41 @@ function ProductViewModal({ open, setOpen, product, isAvailable }) {
     productStatus,
   } = product;
   const dispatch = useDispatch();
-  const { productReviews } = useSelector((state) => state.products);
+  const { productReviews, productReviewEligibility } = useSelector((state) => state.products);
   const { user } = useSelector((state) => state.auth);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const isBuyerUser = Boolean(user?.roles?.includes("ROLE_USER")) && !user?.roles?.some((role) => role === "ROLE_SELLER" || role === "ROLE_ADMIN");
+  const existingUserReview = productReviews?.find((review) => review.reviewerName === user?.username);
 
   useEffect(() => {
     if (open && id) {
       dispatch(fetchProductReviews(id));
+      if (user) {
+        dispatch(fetchProductReviewEligibility(id));
+      } else {
+        dispatch({
+          type: "FETCH_PRODUCT_REVIEW_ELIGIBILITY",
+          payload: null,
+        });
+      }
     }
-  }, [dispatch, open, id]);
+  }, [dispatch, open, id, user]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (productReviewEligibility?.alreadyReviewed && existingUserReview) {
+      setRating(existingUserReview.rating || 5);
+      setComment(existingUserReview.comment || "");
+      return;
+    }
+
+    setRating(5);
+    setComment("");
+  }, [open, productReviewEligibility, existingUserReview]);
 
   const onSubmitReview = (e) => {
     e.preventDefault();
@@ -137,40 +162,56 @@ function ProductViewModal({ open, setOpen, product, isAvailable }) {
                   <p className="text-sm text-slate-500">No reviews yet for this product.</p>
                 )}
 
-                <form className="space-y-3 rounded-lg border bg-slate-50 p-4" onSubmit={onSubmitReview}>
-                  <h4 className="font-semibold text-slate-800">Write a Review</h4>
-                  <TextField
-                    select
-                    fullWidth
-                    label="Rating"
-                    value={rating}
-                    onChange={(e) => setRating(Number(e.target.value))}
-                    SelectProps={{ native: true }}
-                  >
-                    {[5, 4, 3, 2, 1].map((value) => (
-                      <option key={value} value={value}>
-                        {value} Star{value > 1 ? "s" : ""}
-                      </option>
-                    ))}
-                  </TextField>
-                  <TextField
-                    fullWidth
-                    multiline
-                    minRows={3}
-                    label="Comment"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Share your experience with this product"
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      className="rounded-md bg-custom-blue px-4 py-2 font-semibold text-white"
-                    >
-                      Submit Review
-                    </button>
+                {!user ? (
+                  <div className="rounded-lg border bg-slate-50 p-4 text-sm text-slate-600">
+                    Please login with your buyer account after purchasing this product to add a review.
                   </div>
-                </form>
+                ) : !isBuyerUser ? (
+                  <div className="rounded-lg border bg-slate-50 p-4 text-sm text-slate-600">
+                    Reviews can only be added by buyers using a customer account. Seller and admin accounts can view reviews only.
+                  </div>
+                ) : productReviewEligibility?.canReview ? (
+                  <form className="space-y-3 rounded-lg border bg-slate-50 p-4" onSubmit={onSubmitReview}>
+                    <h4 className="font-semibold text-slate-800">
+                      {productReviewEligibility?.alreadyReviewed ? "Update Your Review" : "Write a Review"}
+                    </h4>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Rating"
+                      value={rating}
+                      onChange={(e) => setRating(Number(e.target.value))}
+                      SelectProps={{ native: true }}
+                    >
+                      {[5, 4, 3, 2, 1].map((value) => (
+                        <option key={value} value={value}>
+                          {value} Star{value > 1 ? "s" : ""}
+                        </option>
+                      ))}
+                    </TextField>
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={3}
+                      label="Comment"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Share your experience with this product"
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        className="rounded-md bg-custom-blue px-4 py-2 font-semibold text-white"
+                      >
+                        {productReviewEligibility?.alreadyReviewed ? "Update Review" : "Submit Review"}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="rounded-lg border bg-slate-50 p-4 text-sm text-slate-600">
+                    {productReviewEligibility?.message || "Buy this product successfully to add your review."}
+                  </div>
+                )}
               </div>
             </div>
 

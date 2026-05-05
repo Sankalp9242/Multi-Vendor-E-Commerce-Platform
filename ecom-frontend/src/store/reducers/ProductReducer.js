@@ -2,6 +2,7 @@ const initialState = {
     products: null,
     categories: null,
     productReviews: [],
+    productReviewEligibility: null,
     pagination: {},
 };
 
@@ -39,6 +40,12 @@ export const productReducer = (state = initialState, action) => {
             return {
                 ...state,
                 productReviews: action.payload,
+            };
+
+        case "FETCH_PRODUCT_REVIEW_ELIGIBILITY":
+            return {
+                ...state,
+                productReviewEligibility: action.payload,
             };
         
     

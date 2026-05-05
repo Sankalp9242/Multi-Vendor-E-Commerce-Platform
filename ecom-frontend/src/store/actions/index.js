@@ -38,11 +38,31 @@ export const fetchProductReviews = (productId) => async (dispatch) => {
     }
 };
 
+export const fetchProductReviewEligibility = (productId) => async (dispatch) => {
+    try {
+        const { data } = await api.get(`/products/${productId}/reviews/eligibility`);
+        dispatch({
+            type: "FETCH_PRODUCT_REVIEW_ELIGIBILITY",
+            payload: data,
+        });
+    } catch (error) {
+        dispatch({
+            type: "FETCH_PRODUCT_REVIEW_ELIGIBILITY",
+            payload: {
+                canReview: false,
+                alreadyReviewed: false,
+                message: error?.response?.data?.message || "You are not eligible to review this product",
+            },
+        });
+    }
+};
+
 export const submitProductReview = (productId, sendData, toast) => async (dispatch) => {
     try {
         await api.post(`/products/${productId}/reviews`, sendData);
         toast.success("Review submitted successfully");
         await dispatch(fetchProductReviews(productId));
+        await dispatch(fetchProductReviewEligibility(productId));
         await dispatch(fetchProducts("pageNumber=0"));
     } catch (error) {
         toast.error(error?.response?.data?.message || "Failed to submit review");

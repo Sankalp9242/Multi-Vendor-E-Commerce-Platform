@@ -76,7 +76,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         JOIN o.orderItems oi
         WHERE o.email = :email
         AND oi.product.productId = :productId
-        AND UPPER(o.orderStatus) IN ('CONFIRMED', 'SHIPPED', 'DELIVERED')""")
+        AND UPPER(o.orderStatus) <> 'CANCELLED'
+        AND (
+            UPPER(COALESCE(o.payment.pgStatus, '')) = 'SUCCEEDED'
+            OR UPPER(o.orderStatus) IN ('CONFIRMED', 'SHIPPED', 'DELIVERED')
+        )""")
     boolean existsReviewEligibleOrder(@Param("email") String email, @Param("productId") Long productId);
 
 }
