@@ -43,6 +43,9 @@ public class AnalyticsServiceImpl implements AnalyticsService{
         long sellerCount = userRepository.countByRolesRoleName(com.ecommerce.project.model.AppRole.ROLE_SELLER);
         long totalOrders = orderRepository.count();
         Double totalRevenue = orderRepository.getTotalRevenue();
+        double commissionPercentage = platformSettingsService.getCommissionPercentage();
+        double grossRevenue = totalRevenue != null ? totalRevenue : 0;
+        double commissionEarnings = grossRevenue * commissionPercentage / 100.0;
         long pendingProductApprovals = productRepository.countByProductStatusAndDeletedFalse(ProductStatus.PENDING);
         List<OrderDTO> recentOrders = orderRepository.findTop5ByOrderByOrderDateDesc().stream()
                 .map(order -> modelMapper.map(order, OrderDTO.class))
@@ -54,9 +57,10 @@ public class AnalyticsServiceImpl implements AnalyticsService{
         response.setProductCount(String.valueOf(productCount));
         response.setSellerCount(String.valueOf(sellerCount));
         response.setTotalOrders(String.valueOf(totalOrders));
-        response.setTotalRevenue(String.valueOf(totalRevenue != null ? totalRevenue : 0));
+        response.setTotalRevenue(String.valueOf(grossRevenue));
         response.setPendingProductApprovals(String.valueOf(pendingProductApprovals));
-        response.setCommissionPercentage(String.valueOf(platformSettingsService.getCommissionPercentage()));
+        response.setCommissionPercentage(String.valueOf(commissionPercentage));
+        response.setCommissionEarnings(String.valueOf(commissionEarnings));
         response.setRecentOrders(recentOrders);
         response.setPendingProducts(pendingProducts);
         return response;

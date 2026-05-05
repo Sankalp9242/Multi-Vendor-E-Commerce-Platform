@@ -104,6 +104,18 @@ const Dashboard = () => {
             </div>
 
             <div className="space-y-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                <p className="font-semibold text-slate-800">Commission Earned</p>
+                <p className="text-xl font-bold text-slate-900">
+                  ${Number(analytics.commissionEarnings || 0).toFixed(2)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                <p className="font-semibold text-slate-800">Current Rate</p>
+                <p className="text-xl font-bold text-slate-900">
+                  {Number(analytics.commissionPercentage || commission.commissionPercentage || 0).toFixed(2)}%
+                </p>
+              </div>
               <input
                 type="number"
                 min="0"
