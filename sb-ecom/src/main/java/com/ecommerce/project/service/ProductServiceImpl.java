@@ -92,9 +92,7 @@ public class ProductServiceImpl implements ProductService {
             product.setCategory(category);
             product.setUser(seller);
             product.setProductStatus(ProductStatus.PENDING);
-            double specialPrice = product.getPrice() -
-                    ((product.getDiscount() * 0.01) * product.getPrice());
-            product.setSpecialPrice(specialPrice);
+            product.setSpecialPrice(calculateSpecialPrice(product.getPrice(), product.getDiscount()));
             Product savedProduct = productRepository.save(product);
             return mapProductToDto(savedProduct);
         } else {
@@ -216,7 +214,7 @@ public class ProductServiceImpl implements ProductService {
                 : Sort.by(sortBy).descending();
 
         Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-        Page<Product> pageProducts = productRepository.findByCategoryAndDeletedFalseOrderByPriceAsc(category, pageDetails);
+        Page<Product> pageProducts = productRepository.findByCategoryAndProductStatusAndDeletedFalse(category, ProductStatus.ACTIVE, pageDetails);
 
         List<Product> products = pageProducts.getContent();
 
@@ -245,7 +243,7 @@ public class ProductServiceImpl implements ProductService {
                 : Sort.by(sortBy).descending();
 
         Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-        Page<Product> pageProducts = productRepository.findByProductNameLikeIgnoreCaseAndDeletedFalse('%' + keyword + '%', pageDetails);
+        Page<Product> pageProducts = productRepository.findByProductNameLikeIgnoreCaseAndProductStatusAndDeletedFalse('%' + keyword + '%', ProductStatus.ACTIVE, pageDetails);
 
         List<Product> products = pageProducts.getContent();
         List<ProductDTO> productDTOS = products.stream()
@@ -279,7 +277,7 @@ public class ProductServiceImpl implements ProductService {
         productFromDb.setQuantity(product.getQuantity());
         productFromDb.setDiscount(product.getDiscount());
         productFromDb.setPrice(product.getPrice());
-        productFromDb.setSpecialPrice(product.getSpecialPrice());
+        productFromDb.setSpecialPrice(calculateSpecialPrice(product.getPrice(), product.getDiscount()));
         productFromDb.setProductStatus(ProductStatus.PENDING);
 
         Product savedProduct = productRepository.save(productFromDb);
@@ -379,6 +377,10 @@ public class ProductServiceImpl implements ProductService {
         if (product.getUser() == null || !product.getUser().getUserId().equals(seller.getUserId())) {
             throw new APIException("You can manage only your own products");
         }
+    }
+
+    private double calculateSpecialPrice(double price, double discount) {
+        return price - ((discount * 0.01) * price);
     }
 
     private ProductDTO deleteProductSafely(Product product) {

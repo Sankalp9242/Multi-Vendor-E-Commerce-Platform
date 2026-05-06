@@ -10,6 +10,7 @@ import com.ecommerce.project.model.Order;
 import com.ecommerce.project.model.OrderItem;
 import com.ecommerce.project.model.Payment;
 import com.ecommerce.project.model.Product;
+import com.ecommerce.project.model.ProductStatus;
 import com.ecommerce.project.model.User;
 import com.ecommerce.project.payload.OrderDTO;
 import com.ecommerce.project.payload.OrderItemDTO;
@@ -253,6 +254,14 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void validateOrderItem(Product product, CartItem cartItem) {
+        if (product.getUser() == null) {
+            throw new APIException("Product is not available");
+        }
+
+        if (product.getProductStatus() != ProductStatus.ACTIVE || Boolean.TRUE.equals(product.getDeleted())) {
+            throw new APIException("Product is not available: " + product.getProductName());
+        }
+
         if (product.getUser().getUserId().equals(authUtil.loggedInUserId())) {
             throw new APIException("You cannot purchase your own product: " + product.getProductName());
         }

@@ -27,6 +27,7 @@ import SellerProducts from './components/seller/products/SellerProducts';
 import UserReports from './components/reports/UserReports';
 import SellerReports from './components/reports/SellerReports';
 import AdminReports from './components/reports/AdminReports';
+import Wishlist from './components/wishlist/Wishlist';
 
 
 function App() {
@@ -56,6 +57,7 @@ function App() {
     <Route path="/profile" element={<UserProfile />} />
     <Route path="/profile/orders" element={<UserOrders />} />
     <Route path="/profile/reports" element={<UserReports />} />
+    <Route path="/wishlist" element={<Wishlist />} />
   </Route>
 
   {/* ADMIN */}

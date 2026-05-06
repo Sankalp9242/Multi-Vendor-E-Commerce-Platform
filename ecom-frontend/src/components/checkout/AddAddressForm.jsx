@@ -13,7 +13,6 @@ const AddAddressForm = ({ address, setOpenAddressModal }) => {
     const {
             register,
             handleSubmit,
-            reset,
             setValue,
             formState: {errors},
         } = useForm({
@@ -39,7 +38,7 @@ const AddAddressForm = ({ address, setOpenAddressModal }) => {
                 setValue("pincode", address?.pincode);
                 setValue("country", address?.country);
             }
-        }, [address]);
+        }, [address, setValue]);
 
   return (
     <div className="">

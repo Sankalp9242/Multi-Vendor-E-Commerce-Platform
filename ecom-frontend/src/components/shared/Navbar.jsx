@@ -1,17 +1,26 @@
 import { Badge } from "@mui/material";
-import { useState } from "react";
-import { FaShoppingCart, FaSignInAlt, FaStore } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import { FaHeart, FaShoppingCart, FaSignInAlt, FaStore } from "react-icons/fa";
 import { IoIosMenu } from "react-icons/io";
 import { RxCross2 } from "react-icons/rx";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 import UserMenu from "../UserMenu";
+import { fetchWishlist } from "../../store/actions";
 
 const Navbar = () => {
     const path = useLocation().pathname;
     const [navbarOpen, setNavbarOpen] = useState(false);
+    const dispatch = useDispatch();
     const { cart } = useSelector((state) => state.carts);
     const { user } = useSelector((state) => state.auth);
+    const { items } = useSelector((state) => state.wishlist);
+
+    useEffect(() => {
+        if (user) {
+            dispatch(fetchWishlist());
+        }
+    }, [dispatch, user]);
     
     return (
         <div className="h-[70px] bg-custom-gradient text-white z-50 flex items-center sticky top-0">
@@ -58,6 +67,22 @@ const Navbar = () => {
                    }`}
                     to="/contact">
                         Contact
+                   </Link> 
+                </li>
+
+                <li className="font-medium transition-all duration-150">
+                   <Link className={`${
+                    path === "/wishlist" ? "text-white font-semibold" : "text-gray-200"
+                   }`}
+                    to="/wishlist">
+                        <Badge
+                            showZero
+                            badgeContent={items?.length || 0}
+                            color="primary"
+                            overlap="circular"
+                            anchorOrigin={{ vertical: 'top', horizontal: 'right', }}>
+                                <FaHeart size={24} />
+                        </Badge>
                    </Link> 
                 </li>
 

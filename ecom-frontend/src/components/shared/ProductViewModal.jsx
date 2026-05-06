@@ -3,9 +3,14 @@ import { Divider, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import Status from "./Status";
 import { MdClose, MdDone } from "react-icons/md";
-import { FaStar } from "react-icons/fa";
+import { FaHeart, FaRegHeart, FaStar } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchProductReviewEligibility, fetchProductReviews, submitProductReview } from "../../store/actions";
+import {
+  fetchProductReviewEligibility,
+  fetchProductReviews,
+  submitProductReview,
+  toggleProductWishlist,
+} from "../../store/actions";
 import toast from "react-hot-toast";
 
 function ProductViewModal({ open, setOpen, product, isAvailable }) {
@@ -24,8 +29,10 @@ function ProductViewModal({ open, setOpen, product, isAvailable }) {
   const dispatch = useDispatch();
   const { productReviews, productReviewEligibility } = useSelector((state) => state.products);
   const { user } = useSelector((state) => state.auth);
+  const { productIds } = useSelector((state) => state.wishlist);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const isWishlisted = productIds.includes(id);
   const isBuyerUser = Boolean(user?.roles?.includes("ROLE_USER")) && !user?.roles?.some((role) => role === "ROLE_SELLER" || role === "ROLE_ADMIN");
   const existingUserReview = productReviews?.find((review) => review.reviewerName === user?.username);
 
@@ -79,6 +86,14 @@ function ProductViewModal({ open, setOpen, product, isAvailable }) {
     setRating(5);
   };
 
+  const onToggleWishlist = () => {
+    if (!user) {
+      toast.error("Please login to use wishlist");
+      return;
+    }
+    dispatch(toggleProductWishlist(id, isWishlisted, toast));
+  };
+
   return (
     <Dialog open={open} as="div" className="relative z-10" onClose={() => setOpen(false)}>
       <DialogBackdrop className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
@@ -95,9 +110,19 @@ function ProductViewModal({ open, setOpen, product, isAvailable }) {
             )}
 
             <div className="px-6 pb-2 pt-10">
-              <DialogTitle as="h1" className="mb-4 text-xl font-semibold leading-6 text-gray-800 sm:text-2xl lg:text-3xl">
-                {productName}
-              </DialogTitle>
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <DialogTitle as="h1" className="text-xl font-semibold leading-6 text-gray-800 sm:text-2xl lg:text-3xl">
+                  {productName}
+                </DialogTitle>
+                <button
+                  type="button"
+                  onClick={onToggleWishlist}
+                  className="rounded-full border border-rose-200 p-2 text-rose-600 transition hover:bg-rose-50"
+                  aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                >
+                  {isWishlisted ? <FaHeart /> : <FaRegHeart />}
+                </button>
+              </div>
 
               <div className="space-y-3 pb-4 text-gray-700">
                 <div className="flex items-center justify-between gap-2">

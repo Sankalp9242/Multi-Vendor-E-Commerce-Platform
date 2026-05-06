@@ -1,6 +1,7 @@
 package com.ecommerce.project.service;
 
 import com.ecommerce.project.payload.StripePaymentDto;
+import com.ecommerce.project.exceptions.APIException;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
@@ -23,11 +24,14 @@ public class StripeServiceImpl implements StripeService {
 
     @PostConstruct
     public void init(){
-        Stripe.apiKey = stripeApiKey;
+        if (stripeApiKey != null && !stripeApiKey.isBlank()) {
+            Stripe.apiKey = stripeApiKey;
+        }
     }
 
     @Override
     public PaymentIntent paymentIntent(StripePaymentDto stripePaymentDto) throws StripeException {
+        validateStripeConfigured();
         Customer customer;
         // Retrieve and check if customer exist
         CustomerSearchParams searchParams =
@@ -75,6 +79,13 @@ public class StripeServiceImpl implements StripeService {
 
     @Override
     public PaymentIntent retrievePaymentIntent(String paymentIntentId) throws StripeException {
+        validateStripeConfigured();
         return PaymentIntent.retrieve(paymentIntentId);
+    }
+
+    private void validateStripeConfigured() {
+        if (stripeApiKey == null || stripeApiKey.isBlank()) {
+            throw new APIException("Stripe secret key is not configured");
+        }
     }
 }

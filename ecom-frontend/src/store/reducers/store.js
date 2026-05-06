@@ -10,6 +10,7 @@ import { sellerReducer } from "./sellerReducer";
 import { sellerOrderReducer } from "./sellerOrderReducer";
 import { sellerProductReducer } from "./sellerProductReducer";
 import { reportReducer } from "./reportReducer";
+import { wishlistReducer } from "./wishlistReducer";
 
 
 
@@ -43,6 +44,7 @@ export const store = configureStore({
      sellerOrders: sellerOrderReducer,
       sellerProducts: sellerProductReducer,
       reports: reportReducer,
+      wishlist: wishlistReducer,
   },
   preloadedState: initialState,
 });

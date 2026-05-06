@@ -5,6 +5,7 @@ import com.ecommerce.project.exceptions.ResourceNotFoundException;
 import com.ecommerce.project.model.Cart;
 import com.ecommerce.project.model.CartItem;
 import com.ecommerce.project.model.Product;
+import com.ecommerce.project.model.ProductStatus;
 import com.ecommerce.project.payload.CartDTO;
 import com.ecommerce.project.payload.CartItemDTO;
 import com.ecommerce.project.payload.ProductDTO;
@@ -133,6 +134,9 @@ public class CartServiceImpl implements CartService{
 
         String emailId = authUtil.loggedInEmail();
         Cart userCart = cartRepository.findCartByEmail(emailId);
+        if (userCart == null) {
+            throw new ResourceNotFoundException("Cart", "email", emailId);
+        }
         Long cartId  = userCart.getCartId();
 
         Cart cart = cartRepository.findById(cartId)
@@ -228,6 +232,18 @@ public class CartServiceImpl implements CartService{
         return "Product " + cartItem.getProduct().getProductName() + " removed from the cart !!!";
     }
 
+    @Transactional
+    @Override
+    public String deleteProductFromLoggedInCart(Long productId) {
+        String emailId = authUtil.loggedInEmail();
+        Cart cart = cartRepository.findCartByEmail(emailId);
+        if (cart == null) {
+            throw new ResourceNotFoundException("Cart", "email", emailId);
+        }
+
+        return deleteProductFromCart(cart.getCartId(), productId);
+    }
+
 
     @Override
     public void updateProductInCarts(Long cartId, Long productId) {
@@ -311,6 +327,14 @@ public class CartServiceImpl implements CartService{
     private void validateCartItemRequest(Product product, Integer quantity) {
         if (quantity == null || quantity <= 0) {
             throw new APIException("Quantity must be greater than 0");
+        }
+
+        if (product.getUser() == null) {
+            throw new APIException("Product is not available");
+        }
+
+        if (product.getProductStatus() != ProductStatus.ACTIVE || Boolean.TRUE.equals(product.getDeleted())) {
+            throw new APIException(product.getProductName() + " is not available");
         }
 
         if (product.getUser().getUserId().equals(authUtil.loggedInUserId())) {

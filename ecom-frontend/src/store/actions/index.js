@@ -30,7 +30,7 @@ export const fetchProductReviews = (productId) => async (dispatch) => {
             type: "FETCH_PRODUCT_REVIEWS",
             payload: data,
         });
-    } catch (error) {
+    } catch {
         dispatch({
             type: "FETCH_PRODUCT_REVIEWS",
             payload: [],
@@ -66,6 +66,46 @@ export const submitProductReview = (productId, sendData, toast) => async (dispat
         await dispatch(fetchProducts("pageNumber=0"));
     } catch (error) {
         toast.error(error?.response?.data?.message || "Failed to submit review");
+    }
+};
+
+export const fetchWishlist = () => async (dispatch) => {
+    try {
+        const { data } = await api.get("/wishlist");
+        dispatch({ type: "FETCH_WISHLIST", payload: data });
+    } catch (error) {
+        dispatch({
+            type: "IS_ERROR",
+            payload: error?.response?.data?.message || "Failed to fetch wishlist",
+        });
+    }
+};
+
+export const addProductToWishlist = (productId, toast) => async (dispatch) => {
+    try {
+        const { data } = await api.post(`/wishlist/products/${productId}`);
+        dispatch({ type: "ADD_WISHLIST_ITEM", payload: data });
+        toast?.success("Added to wishlist");
+    } catch (error) {
+        toast?.error(error?.response?.data?.message || "Failed to add to wishlist");
+    }
+};
+
+export const removeProductFromWishlist = (productId, toast) => async (dispatch) => {
+    try {
+        await api.delete(`/wishlist/products/${productId}`);
+        dispatch({ type: "REMOVE_WISHLIST_ITEM", payload: productId });
+        toast?.success("Removed from wishlist");
+    } catch (error) {
+        toast?.error(error?.response?.data?.message || "Failed to remove from wishlist");
+    }
+};
+
+export const toggleProductWishlist = (productId, isWishlisted, toast) => async (dispatch) => {
+    if (isWishlisted) {
+        await dispatch(removeProductFromWishlist(productId, toast));
+    } else {
+        await dispatch(addProductToWishlist(productId, toast));
     }
 };
 
@@ -179,7 +219,7 @@ export const increaseCartQuantity =
 
 
 export const decreaseCartQuantity = 
-    (data, newQuantity) => async (dispatch) => {
+    (data) => async (dispatch) => {
         try {
             await api.put(`/cart/products/${data.productId}/quantity/delete`);
             await dispatch(getUserCart());
@@ -236,8 +276,14 @@ export const registerNewUser
 };
 
 
-export const logOutUser = (navigate) => (dispatch) => {
+export const logOutUser = (navigate) => async (dispatch) => {
+    try {
+        await api.post("/auth/signout");
+    } catch (error) {
+        console.log(error);
+    }
     dispatch({ type:"LOG_OUT" });
+    dispatch({ type:"CLEAR_WISHLIST" });
     localStorage.removeItem("auth");
     localStorage.removeItem("CHECKOUT_ADDRESS");
     localStorage.removeItem("client-secret");
@@ -343,7 +389,7 @@ export const addPaymentMethod = (method) => {
 };
 
 
-export const createUserCart = (sendCartItems) => async (dispatch, getState) => {
+export const createUserCart = (sendCartItems) => async (dispatch) => {
     try {
         dispatch({ type: "IS_FETCHING" });
         await api.post('/cart/create', sendCartItems);
@@ -697,7 +743,7 @@ export const getAllCategoriesDashboard = (queryString) => async (dispatch) => {
 };
 
 export const createCategoryDashboardAction =
-  (sendData, setOpen, reset, toast) => async (dispatch, getState) => {
+  (sendData, setOpen, reset, toast) => async (dispatch) => {
     try {
       dispatch({ type: "CATEGORY_LOADER" });
       await api.post("/admin/categories", sendData);
@@ -721,7 +767,7 @@ export const createCategoryDashboardAction =
 
 export const updateCategoryDashboardAction =
   (sendData, setOpen, categoryID, reset, toast) =>
-  async (dispatch, getState) => {
+  async (dispatch) => {
     try {
       dispatch({ type: "CATEGORY_LOADER" });
 
@@ -747,7 +793,7 @@ export const updateCategoryDashboardAction =
   };
 
 export const deleteCategoryDashboardAction =
-  (setOpen, categoryID, toast) => async (dispatch, getState) => {
+  (setOpen, categoryID, toast) => async (dispatch) => {
     try {
       dispatch({ type: "CATEGORY_LOADER" });
 
@@ -770,7 +816,7 @@ export const deleteCategoryDashboardAction =
 
 
   export const getAllSellersDashboard =
-  (queryString) => async (dispatch, getState) => {
+  (queryString) => async (dispatch) => {
     try {
       dispatch({ type: "IS_FETCHING" });
       const { data } = await api.get(`/admin/sellers?${queryString}`);

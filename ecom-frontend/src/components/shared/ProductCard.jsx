@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { FaShoppingCart, FaStar } from "react-icons/fa";
+import { FaHeart, FaRegHeart, FaShoppingCart, FaStar } from "react-icons/fa";
 import ProductViewModal from "./ProductViewModal";
 import truncateText from "../../utils/truncateText";
-import { useDispatch } from "react-redux";
-import { addToCart } from "../../store/actions";
+import { useDispatch, useSelector } from "react-redux";
+import { addToCart, toggleProductWishlist } from "../../store/actions";
 import toast from "react-hot-toast";
 
 const ProductCard = ({
@@ -17,6 +17,8 @@ const ProductCard = ({
   specialPrice,
   averageRating,
   reviewCount,
+  sellerName,
+  productStatus,
   about = false,
 }) => {
   const [openProductViewModal, setOpenProductViewModal] = useState(false);
@@ -24,6 +26,9 @@ const ProductCard = ({
   const [selectedViewProduct, setSelectedViewProduct] = useState("");
   const isAvailable = quantity && Number(quantity) > 0;
   const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const { productIds } = useSelector((state) => state.wishlist);
+  const isWishlisted = productIds.includes(productId);
 
   const handleProductView = (product) => {
     if (!about) {
@@ -34,6 +39,15 @@ const ProductCard = ({
 
   const addToCartHandler = (cartItems) => {
     dispatch(addToCart(cartItems, 1, toast));
+  };
+
+  const wishlistHandler = (event) => {
+    event.stopPropagation();
+    if (!user) {
+      toast.error("Please login to use wishlist");
+      return;
+    }
+    dispatch(toggleProductWishlist(productId, isWishlisted, toast));
   };
 
   return (
@@ -51,10 +65,22 @@ const ProductCard = ({
             specialPrice,
             averageRating,
             reviewCount,
+            sellerName,
+            productStatus,
           });
         }}
-        className="aspect-3/2 w-full overflow-hidden"
+        className="relative aspect-3/2 w-full overflow-hidden"
       >
+        {!about && (
+          <button
+            type="button"
+            onClick={wishlistHandler}
+            className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 text-rose-600 shadow-md transition hover:bg-rose-50"
+            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          >
+            {isWishlisted ? <FaHeart /> : <FaRegHeart />}
+          </button>
+        )}
         <img
           className="h-full w-full cursor-pointer transform transition-transform duration-300 hover:scale-105"
           src={image}
@@ -75,6 +101,8 @@ const ProductCard = ({
               specialPrice,
               averageRating,
               reviewCount,
+              sellerName,
+              productStatus,
             });
           }}
           className="mb-2 cursor-pointer text-lg font-semibold"

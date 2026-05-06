@@ -18,6 +18,8 @@ public interface CartService {
 
     String deleteProductFromCart(Long cartId, Long productId);
 
+    String deleteProductFromLoggedInCart(Long productId);
+
     void updateProductInCarts(Long cartId, Long productId);
 
     String createOrUpdateCartWithItems(List<CartItemDTO> cartItems);

@@ -56,7 +56,7 @@ const dispatch = useDispatch();
             setValue("specialPrice", product?.specialPrice);
             setValue("description", product?.description);
         }
-    }, [update, product]);
+    }, [update, product, setValue]);
 
 
     useEffect(() => {
