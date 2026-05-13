@@ -1,4 +1,4 @@
-import { Button, FormControl, FormHelperText, InputLabel, MenuItem, Select, TextField } from "@mui/material";
+import { Button, FormControl, FormHelperText, MenuItem, Select, TextField } from "@mui/material";
 import { useMemo, useState } from "react";
 import Spinners from "../../shared/Spinners";
 import { useDispatch, useSelector } from "react-redux";
@@ -62,17 +62,18 @@ const UpdateOrderForm = ({ setOpen, selectedId, selectedItem, loader, setLoader 
 
   return (
     <div className="relative h-full py-5">
-      <form className="space-y-4" onSubmit={updateOrderStatus}>
-        <FormControl fullWidth variant="outlined" error={!!error}>
-          <InputLabel id="order-status-label">Order Status</InputLabel>
+      <form className="space-y-5 pb-24" onSubmit={updateOrderStatus}>
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-slate-800">Order Status</label>
+          <FormControl fullWidth variant="outlined" error={!!error}>
           <Select
-            labelId="order-status-label"
-            label="Order Status"
+            displayEmpty
             value={orderStatus}
             onChange={(e) => {
               setOrderStatus(e.target.value);
               setError("");
             }}
+            sx={{ backgroundColor: "white" }}
           >
             {ORDER_STATUSES.map((status) => (
               <MenuItem key={status} value={status}>
@@ -81,39 +82,45 @@ const UpdateOrderForm = ({ setOpen, selectedId, selectedItem, loader, setLoader 
             ))}
           </Select>
 
-          {error && <FormHelperText>{error}</FormHelperText>}
-        </FormControl>
+            {error && <FormHelperText>{error}</FormHelperText>}
+          </FormControl>
+        </div>
 
-        <TextField
-          fullWidth
-          label="Carrier Name"
-          value={carrierName}
-          onChange={(e) => {
-            setCarrierName(e.target.value);
-            setError("");
-          }}
-          placeholder="Blue Dart, Delhivery, DHL..."
-        />
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-slate-800">Carrier Name</label>
+          <TextField
+            fullWidth
+            value={carrierName}
+            onChange={(e) => {
+              setCarrierName(e.target.value);
+              setError("");
+            }}
+            placeholder="Blue Dart, Delhivery, DHL..."
+          />
+        </div>
 
-        <TextField
-          fullWidth
-          label="Tracking Number"
-          value={trackingNumber}
-          onChange={(e) => {
-            setTrackingNumber(e.target.value);
-            setError("");
-          }}
-          placeholder="Enter shipment tracking number"
-        />
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-slate-800">Tracking Number</label>
+          <TextField
+            fullWidth
+            value={trackingNumber}
+            onChange={(e) => {
+              setTrackingNumber(e.target.value);
+              setError("");
+            }}
+            placeholder="Enter shipment tracking number"
+          />
+        </div>
 
-        <TextField
-          fullWidth
-          type="date"
-          label="Estimated Delivery Date"
-          value={estimatedDeliveryDate}
-          onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-        />
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-slate-800">Estimated Delivery Date</label>
+          <TextField
+            fullWidth
+            type="date"
+            value={estimatedDeliveryDate}
+            onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
+          />
+        </div>
 
         <div className="absolute bottom-14 flex w-full items-center justify-between">
           <Button

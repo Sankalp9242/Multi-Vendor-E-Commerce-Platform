@@ -83,8 +83,10 @@ public class AuthServiceImpl implements AuthService {
                 ))
                 .collect(Collectors.toList());
 
-        UserInfoResponse response = new UserInfoResponse(userDetails.getId(),
-                userDetails.getUsername(), roles, userDetails.getEmail(), jwtCookie.toString());
+        User currentUser = userRepository.findByUserName(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        UserInfoResponse response = buildUserInfoResponse(currentUser);
+        response.setJwtToken(jwtCookie.toString());
 
         return new AuthenticationResult(response, jwtCookie);
     }
@@ -143,25 +145,9 @@ public class AuthServiceImpl implements AuthService {
     public UserInfoResponse getCurrentUserDetails(Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .sorted((left, right) -> Integer.compare(
-                        ROLE_PRIORITY.getOrDefault(left, Integer.MAX_VALUE),
-                        ROLE_PRIORITY.getOrDefault(right, Integer.MAX_VALUE)
-                ))
-                .collect(Collectors.toList());
-
-        UserInfoResponse response = new UserInfoResponse(userDetails.getId(),
-                userDetails.getUsername(), roles);
         User currentUser = userRepository.findByUserName(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        response.setEmail(currentUser.getEmail());
-        response.setSellerApproved(currentUser.getSellerApproved());
-        response.setSellerActive(currentUser.getSellerActive());
-        response.setStoreName(currentUser.getStoreName());
-        response.setStoreDescription(currentUser.getStoreDescription());
-
-        return response;
+        return buildUserInfoResponse(currentUser);
     }
 
     @Override
@@ -223,8 +209,10 @@ public class AuthServiceImpl implements AuthService {
 
     private Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        return userDetails.getId();
+        String username = authentication.getName();
+        return userRepository.findByUserName(username)
+                .map(User::getUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     private UserInfoResponse buildUserInfoResponse(User currentUser) {

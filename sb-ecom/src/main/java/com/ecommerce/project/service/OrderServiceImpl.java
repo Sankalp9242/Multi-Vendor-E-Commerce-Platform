@@ -113,7 +113,7 @@ public class OrderServiceImpl implements OrderService {
         order.setEmail(emailId);
         order.setOrderDate(LocalDate.now());
         order.setTotalAmount(cart.getTotalPrice());
-        order.setOrderStatus(AppConstants.ORDER_STATUS_PENDING);
+        order.setOrderStatus(resolveInitialOrderStatus(paymentVerification.paymentStatus()));
         order.setAddress(address);
 
         Payment payment = new Payment(
@@ -325,6 +325,14 @@ public class OrderServiceImpl implements OrderService {
         } catch (StripeException e) {
             throw new APIException("Unable to verify Stripe payment");
         }
+    }
+
+    private String resolveInitialOrderStatus(String paymentStatus) {
+        if (paymentStatus != null && "succeeded".equalsIgnoreCase(paymentStatus.trim())) {
+            return AppConstants.ORDER_STATUS_CONFIRMED;
+        }
+
+        return AppConstants.ORDER_STATUS_PENDING;
     }
 
     private OrderResponse buildOrderResponse(Page<Order> pageOrders, Long sellerId) {
