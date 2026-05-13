@@ -34,6 +34,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     long countByUserUserIdAndProductStatusAndDeletedFalse(Long userId, ProductStatus productStatus);
 
+    long countByUserUserIdAndDeletedFalseAndQuantityLessThanEqual(Long userId, Integer quantity);
+
+    java.util.List<Product> findTop5ByUserUserIdAndDeletedFalseAndQuantityLessThanEqualOrderByQuantityAsc(Long userId, Integer quantity);
+
     long countByDeletedFalse();
 
     Page<Product> findByDeletedFalse(Pageable pageable);

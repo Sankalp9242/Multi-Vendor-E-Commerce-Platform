@@ -20,6 +20,8 @@ import java.util.List;
 @Service
 public class AnalyticsServiceImpl implements AnalyticsService{
 
+    private static final int LOW_STOCK_THRESHOLD = 5;
+
     @Autowired
     private ProductRepository productRepository;
 
@@ -76,6 +78,12 @@ public class AnalyticsServiceImpl implements AnalyticsService{
         long pendingOrders = orderRepository.countOrdersBySellerAndStatus(sellerId, AppConstants.ORDER_STATUS_PENDING);
         long deliveredOrders = orderRepository.countOrdersBySellerAndStatus(sellerId, AppConstants.ORDER_STATUS_DELIVERED);
         Long soldUnits = orderRepository.getSoldUnitsBySeller(sellerId);
+        long lowStockCount = productRepository.countByUserUserIdAndDeletedFalseAndQuantityLessThanEqual(sellerId, LOW_STOCK_THRESHOLD);
+        List<ProductDTO> lowStockProducts = productRepository
+                .findTop5ByUserUserIdAndDeletedFalseAndQuantityLessThanEqualOrderByQuantityAsc(sellerId, LOW_STOCK_THRESHOLD)
+                .stream()
+                .map(this::mapProductToDto)
+                .toList();
         double commissionPercentage = platformSettingsService.getCommissionPercentage();
         double grossSales = totalRevenue != null ? totalRevenue : 0;
         double sellerEarnings = grossSales - (grossSales * commissionPercentage / 100.0);
@@ -89,6 +97,8 @@ public class AnalyticsServiceImpl implements AnalyticsService{
         response.setGrossSales(String.valueOf(grossSales));
         response.setSellerEarnings(String.valueOf(sellerEarnings));
         response.setCommissionPercentage(String.valueOf(commissionPercentage));
+        response.setLowStockCount(String.valueOf(lowStockCount));
+        response.setLowStockProducts(lowStockProducts);
         return response;
     }
 

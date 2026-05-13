@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { FaBoxOpen, FaShoppingCart, FaWallet } from "react-icons/fa";
-import { MdAttachMoney, MdOutlinePendingActions } from "react-icons/md";
+import { MdAttachMoney, MdOutlinePendingActions, MdWarningAmber } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { analyticsAction, fetchSellerOrders } from "../../../store/actions";
@@ -30,6 +30,11 @@ const SellerDashboard = () => {
         title: "Pending Approvals",
         amount: analytics.pendingProductApprovals || 0,
         Icon: MdOutlinePendingActions,
+      },
+      {
+        title: "Low Stock Alerts",
+        amount: analytics.lowStockCount || 0,
+        Icon: MdWarningAmber,
       },
     ],
     [analytics]
@@ -130,6 +135,36 @@ const SellerDashboard = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4">
+          <h2 className="text-2xl font-semibold text-slate-800">Low Stock Alerts</h2>
+          <p className="text-sm text-slate-500">Products with 5 units or fewer left need attention.</p>
+        </div>
+
+        {!analytics.lowStockProducts?.length ? (
+          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-slate-500">
+            Nice work. No low-stock products right now.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {analytics.lowStockProducts.map((product) => (
+              <div
+                key={product.productId}
+                className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 md:flex-row md:items-center md:justify-between"
+              >
+                <div className="space-y-1">
+                  <p className="font-semibold text-slate-800">{product.productName}</p>
+                  <p className="text-sm text-slate-600">Status: {product.productStatus}</p>
+                </div>
+                <div className="text-sm font-semibold text-amber-800 md:text-right">
+                  {product.quantity} unit(s) left
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

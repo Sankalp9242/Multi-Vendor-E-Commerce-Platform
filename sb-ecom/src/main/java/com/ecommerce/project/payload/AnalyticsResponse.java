@@ -20,6 +20,8 @@ public class AnalyticsResponse {
     private String sellerEarnings;
     private String commissionPercentage;
     private String commissionEarnings;
+    private String lowStockCount;
     private java.util.List<com.ecommerce.project.payload.OrderDTO> recentOrders;
     private java.util.List<com.ecommerce.project.payload.ProductDTO> pendingProducts;
+    private java.util.List<com.ecommerce.project.payload.ProductDTO> lowStockProducts;
 }
