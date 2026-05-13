@@ -4,6 +4,7 @@ import com.ecommerce.project.exceptions.APIException;
 import com.ecommerce.project.exceptions.ResourceNotFoundException;
 import com.ecommerce.project.model.Cart;
 import com.ecommerce.project.model.CartItem;
+import com.ecommerce.project.model.Coupon;
 import com.ecommerce.project.model.Product;
 import com.ecommerce.project.model.ProductStatus;
 import com.ecommerce.project.payload.CartDTO;
@@ -11,6 +12,7 @@ import com.ecommerce.project.payload.CartItemDTO;
 import com.ecommerce.project.payload.ProductDTO;
 import com.ecommerce.project.repositories.CartItemRepository;
 import com.ecommerce.project.repositories.CartRepository;
+import com.ecommerce.project.repositories.CouponRepository;
 import com.ecommerce.project.repositories.ProductRepository;
 import com.ecommerce.project.util.AuthUtil;
 import jakarta.transaction.Transactional;
@@ -18,9 +20,10 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 public class CartServiceImpl implements CartService{
@@ -35,6 +38,9 @@ public class CartServiceImpl implements CartService{
 
     @Autowired
     CartItemRepository cartItemRepository;
+
+    @Autowired
+    CouponRepository couponRepository;
 
     @Autowired
     ModelMapper modelMapper;
@@ -63,26 +69,10 @@ public class CartServiceImpl implements CartService{
         newCartItem.setProductPrice(product.getSpecialPrice());
 
         cartItemRepository.save(newCartItem);
-
-        product.setQuantity(product.getQuantity());
-
-        cart.setTotalPrice(cart.getTotalPrice() + (product.getSpecialPrice() * quantity));
-
+        cart.getCartItems().add(newCartItem);
+        recalculateCart(cart);
         cartRepository.save(cart);
-
-        CartDTO cartDTO = modelMapper.map(cart, CartDTO.class);
-
-        List<CartItem> cartItems = cart.getCartItems();
-
-        Stream<ProductDTO> productStream = cartItems.stream().map(item -> {
-            ProductDTO map = modelMapper.map(item.getProduct(), ProductDTO.class);
-            map.setQuantity(item.getQuantity());
-            return map;
-        });
-
-        cartDTO.setProducts(productStream.toList());
-
-        return cartDTO;
+        return mapCartToDto(cart);
     }
 
     @Override
@@ -93,23 +83,10 @@ public class CartServiceImpl implements CartService{
             throw new APIException("No cart exists");
         }
 
-        List<CartDTO> cartDTOs = carts.stream().map(cart -> {
-            CartDTO cartDTO = modelMapper.map(cart, CartDTO.class);
-
-            List<ProductDTO> products = cart.getCartItems().stream().map(cartItem -> {
-                ProductDTO productDTO = modelMapper.map(cartItem.getProduct(), ProductDTO.class);
-                productDTO.setQuantity(cartItem.getQuantity()); // Set the quantity from CartItem
-                return productDTO;
-            }).collect(Collectors.toList());
-
-
-            cartDTO.setProducts(products);
-
-            return cartDTO;
-
-        }).collect(Collectors.toList());
-
-        return cartDTOs;
+        return carts.stream()
+                .peek(this::recalculateCart)
+                .map(this::mapCartToDto)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -118,14 +95,21 @@ public class CartServiceImpl implements CartService{
         if (cart == null){
             throw new ResourceNotFoundException("Cart", "cartId", cartId);
         }
-        CartDTO cartDTO = modelMapper.map(cart, CartDTO.class);
-        cart.getCartItems().forEach(c ->
-                c.getProduct().setQuantity(c.getQuantity()));
-        List<ProductDTO> products = cart.getCartItems().stream()
-                .map(p -> modelMapper.map(p.getProduct(), ProductDTO.class))
-                .toList();
-        cartDTO.setProducts(products);
-        return cartDTO;
+        recalculateCart(cart);
+        cartRepository.save(cart);
+        return mapCartToDto(cart);
+    }
+
+    @Override
+    public CartDTO getLoggedInUserCart() {
+        String emailId = authUtil.loggedInEmail();
+        Cart cart = cartRepository.findCartByEmail(emailId);
+        if (cart == null) {
+            throw new ResourceNotFoundException("Cart", "email", emailId);
+        }
+        recalculateCart(cart);
+        cartRepository.save(cart);
+        return mapCartToDto(cart);
     }
 
     @Transactional
@@ -165,35 +149,18 @@ public class CartServiceImpl implements CartService{
         }
 
         if (newQuantity == 0){
-            deleteProductFromCart(cartId, productId);
+            cartItemRepository.delete(cartItem);
+            cart.getCartItems().removeIf(item -> item.getProduct().getProductId().equals(productId));
         } else {
             cartItem.setProductPrice(product.getSpecialPrice());
-            cartItem.setQuantity(cartItem.getQuantity() + quantity);
+            cartItem.setQuantity(newQuantity);
             cartItem.setDiscount(product.getDiscount());
-            cart.setTotalPrice(cart.getTotalPrice() + (cartItem.getProductPrice() * quantity));
-            cartRepository.save(cart);
+            cartItemRepository.save(cartItem);
         }
 
-        CartItem updatedItem = cartItemRepository.save(cartItem);
-        if(updatedItem.getQuantity() == 0){
-            cartItemRepository.deleteById(updatedItem.getCartItemId());
-        }
-
-
-        CartDTO cartDTO = modelMapper.map(cart, CartDTO.class);
-
-        List<CartItem> cartItems = cart.getCartItems();
-
-        Stream<ProductDTO> productStream = cartItems.stream().map(item -> {
-            ProductDTO prd = modelMapper.map(item.getProduct(), ProductDTO.class);
-            prd.setQuantity(item.getQuantity());
-            return prd;
-        });
-
-
-        cartDTO.setProducts(productStream.toList());
-
-        return cartDTO;
+        recalculateCart(cart);
+        cartRepository.save(cart);
+        return mapCartToDto(cart);
     }
 
 
@@ -205,6 +172,7 @@ public class CartServiceImpl implements CartService{
 
         Cart cart = new Cart();
         cart.setTotalPrice(0.00);
+        cart.setDiscountAmount(0.00);
         cart.setUser(authUtil.loggedInUser());
         Cart newCart =  cartRepository.save(cart);
 
@@ -224,10 +192,10 @@ public class CartServiceImpl implements CartService{
             throw new ResourceNotFoundException("Product", "productId", productId);
         }
 
-        cart.setTotalPrice(cart.getTotalPrice() -
-                (cartItem.getProductPrice() * cartItem.getQuantity()));
-
         cartItemRepository.deleteCartItemByProductIdAndCartId(cartId, productId);
+        cart.getCartItems().removeIf(item -> item.getProduct().getProductId().equals(productId));
+        recalculateCart(cart);
+        cartRepository.save(cart);
 
         return "Product " + cartItem.getProduct().getProductName() + " removed from the cart !!!";
     }
@@ -259,15 +227,10 @@ public class CartServiceImpl implements CartService{
             throw new APIException("Product " + product.getProductName() + " not available in the cart!!!");
         }
 
-        double cartPrice = cart.getTotalPrice()
-                - (cartItem.getProductPrice() * cartItem.getQuantity());
-
         cartItem.setProductPrice(product.getSpecialPrice());
-
-        cart.setTotalPrice(cartPrice
-                + (cartItem.getProductPrice() * cartItem.getQuantity()));
-
-        cartItem = cartItemRepository.save(cartItem);
+        cartItemRepository.save(cartItem);
+        recalculateCart(cart);
+        cartRepository.save(cart);
     }
 
     @Transactional
@@ -290,9 +253,8 @@ public class CartServiceImpl implements CartService{
         } else {
             // Clear all current items in the existing cart
             cartItemRepository.deleteAllByCartId(existingCart.getCartId());
+            existingCart.getCartItems().clear();
         }
-
-        double totalPrice = 0.00;
 
         // Process each item in the request to add to the cart
         for (CartItemDTO cartItemDTO : cartItems) {
@@ -305,9 +267,6 @@ public class CartServiceImpl implements CartService{
 
             validateCartItemRequest(product, quantity);
 
-            // Directly update product stock and total price
-            totalPrice += product.getSpecialPrice() * quantity;
-
             // Create and save cart item
             CartItem cartItem = new CartItem();
             cartItem.setProduct(product);
@@ -316,12 +275,37 @@ public class CartServiceImpl implements CartService{
             cartItem.setProductPrice(product.getSpecialPrice());
             cartItem.setDiscount(product.getDiscount());
             cartItemRepository.save(cartItem);
+            existingCart.getCartItems().add(cartItem);
         }
 
-        // Update the cart's total price and save
-        existingCart.setTotalPrice(totalPrice);
+        recalculateCart(existingCart);
         cartRepository.save(existingCart);
         return "Cart created/updated with the new items successfully";
+    }
+
+    @Transactional
+    @Override
+    public CartDTO applyCouponToLoggedInCart(String couponCode) {
+        Cart cart = getLoggedInCartEntity();
+        if (cart.getCartItems().isEmpty()) {
+            throw new APIException("Add products to the cart before applying a coupon");
+        }
+
+        Coupon coupon = validateCouponForSubtotal(couponCode, calculateSubtotal(cart));
+        cart.setAppliedCouponCode(coupon.getCode());
+        recalculateCart(cart);
+        cartRepository.save(cart);
+        return mapCartToDto(cart);
+    }
+
+    @Transactional
+    @Override
+    public CartDTO removeCouponFromLoggedInCart() {
+        Cart cart = getLoggedInCartEntity();
+        clearCoupon(cart);
+        recalculateCart(cart);
+        cartRepository.save(cart);
+        return mapCartToDto(cart);
     }
 
     private void validateCartItemRequest(Product product, Integer quantity) {
@@ -349,6 +333,113 @@ public class CartServiceImpl implements CartService{
             throw new APIException("Please, make an order of the " + product.getProductName()
                     + " less than or equal to the quantity " + product.getQuantity() + ".");
         }
+    }
+
+    private Cart getLoggedInCartEntity() {
+        String emailId = authUtil.loggedInEmail();
+        Cart cart = cartRepository.findCartByEmail(emailId);
+        if (cart == null) {
+            throw new ResourceNotFoundException("Cart", "email", emailId);
+        }
+        return cart;
+    }
+
+    private CartDTO mapCartToDto(Cart cart) {
+        CartDTO cartDTO = modelMapper.map(cart, CartDTO.class);
+        double subtotal = calculateSubtotal(cart);
+        cartDTO.setSubtotalPrice(subtotal);
+        cartDTO.setDiscountAmount(defaultDouble(cart.getDiscountAmount()));
+        cartDTO.setAppliedCouponCode(cart.getAppliedCouponCode());
+
+        List<ProductDTO> products = cart.getCartItems().stream()
+                .map(item -> {
+                    ProductDTO productDTO = modelMapper.map(item.getProduct(), ProductDTO.class);
+                    productDTO.setQuantity(item.getQuantity());
+                    return productDTO;
+                })
+                .collect(Collectors.toList());
+
+        cartDTO.setProducts(products);
+        return cartDTO;
+    }
+
+    private void recalculateCart(Cart cart) {
+        double subtotal = calculateSubtotal(cart);
+        double discountAmount = 0.0;
+
+        if (cart.getAppliedCouponCode() != null && !cart.getAppliedCouponCode().isBlank()) {
+            Coupon coupon = resolveCoupon(cart.getAppliedCouponCode());
+            if (coupon == null || !isCouponApplicable(coupon, subtotal)) {
+                clearCoupon(cart);
+            } else {
+                discountAmount = roundToTwoDecimals(subtotal * (coupon.getDiscountPercentage() / 100.0));
+                cart.setAppliedCouponCode(coupon.getCode());
+            }
+        }
+
+        cart.setDiscountAmount(discountAmount);
+        cart.setTotalPrice(roundToTwoDecimals(Math.max(subtotal - discountAmount, 0.0)));
+    }
+
+    private double calculateSubtotal(Cart cart) {
+        return roundToTwoDecimals(cart.getCartItems().stream()
+                .mapToDouble(item -> item.getProductPrice() * item.getQuantity())
+                .sum());
+    }
+
+    private Coupon validateCouponForSubtotal(String couponCode, double subtotal) {
+        Coupon coupon = resolveCoupon(couponCode);
+        if (coupon == null) {
+            throw new APIException("Coupon code does not exist");
+        }
+
+        if (!Boolean.TRUE.equals(coupon.getActive())) {
+            throw new APIException("Coupon is inactive");
+        }
+
+        if (coupon.getExpiryDate() != null && coupon.getExpiryDate().isBefore(LocalDate.now())) {
+            throw new APIException("Coupon has expired");
+        }
+
+        if (subtotal < defaultDouble(coupon.getMinimumOrderAmount())) {
+            throw new APIException("Cart total does not meet the minimum amount for this coupon");
+        }
+
+        return coupon;
+    }
+
+    private boolean isCouponApplicable(Coupon coupon, double subtotal) {
+        if (coupon == null || !Boolean.TRUE.equals(coupon.getActive())) {
+            return false;
+        }
+
+        if (coupon.getExpiryDate() != null && coupon.getExpiryDate().isBefore(LocalDate.now())) {
+            return false;
+        }
+
+        return subtotal >= defaultDouble(coupon.getMinimumOrderAmount());
+    }
+
+    private Coupon resolveCoupon(String couponCode) {
+        if (couponCode == null || couponCode.isBlank()) {
+            return null;
+        }
+
+        return couponRepository.findByCodeIgnoreCase(couponCode.trim().toUpperCase(Locale.ROOT))
+                .orElse(null);
+    }
+
+    private void clearCoupon(Cart cart) {
+        cart.setAppliedCouponCode(null);
+        cart.setDiscountAmount(0.0);
+    }
+
+    private double defaultDouble(Double value) {
+        return value == null ? 0.0 : value;
+    }
+
+    private double roundToTwoDecimals(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 
 }

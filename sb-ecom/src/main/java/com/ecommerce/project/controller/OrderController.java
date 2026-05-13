@@ -2,7 +2,7 @@ package com.ecommerce.project.controller;
 
 import com.ecommerce.project.config.AppConstants;
 import com.ecommerce.project.payload.*;
-import com.ecommerce.project.security.services.UserDetailsImpl;
+import com.ecommerce.project.service.CartService;
 import com.ecommerce.project.service.OrderService;
 import com.ecommerce.project.service.StripeService;
 import com.stripe.exception.SignatureVerificationException;
@@ -36,6 +36,9 @@ public class OrderController {
 
     @Autowired
     private StripeService stripeService;
+
+    @Autowired
+    private CartService cartService;
 
     @Value("${stripe.webhook.secret:}")
     private String stripeWebhookSecret;
@@ -73,6 +76,8 @@ public class OrderController {
     @PostMapping("/order/stripe-client-secret")
     public ResponseEntity<String> createStripeClientSecret(@RequestBody StripePaymentDto stripePaymentDto) throws StripeException {
         log.debug("Creating Stripe client secret for email {}", stripePaymentDto.getEmail());
+        CartDTO cartDTO = cartService.getLoggedInUserCart();
+        stripePaymentDto.setAmount(Math.round(cartDTO.getTotalPrice() * 100));
         PaymentIntent paymentIntent = stripeService.paymentIntent(stripePaymentDto);
         return new ResponseEntity<>(paymentIntent.getClientSecret(), HttpStatus.CREATED);
     }

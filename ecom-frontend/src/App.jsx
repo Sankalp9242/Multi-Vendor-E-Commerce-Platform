@@ -29,6 +29,7 @@ import UserReports from './components/reports/UserReports';
 import SellerReports from './components/reports/SellerReports';
 import AdminReports from './components/reports/AdminReports';
 import Wishlist from './components/wishlist/Wishlist';
+import Coupons from './components/admin/coupons/Coupons';
 
 
 function App() {
@@ -69,6 +70,7 @@ function App() {
       <Route path="sellers" element={<Sellers />} />
       <Route path="orders" element={<Orders />} />
       <Route path="categories" element={<Category />} />
+      <Route path="coupons" element={<Coupons />} />
       <Route path="reports" element={<AdminReports />} />
     </Route>
   </Route>

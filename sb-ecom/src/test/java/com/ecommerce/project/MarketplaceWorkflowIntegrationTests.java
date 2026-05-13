@@ -1,13 +1,19 @@
 package com.ecommerce.project;
 
 import com.ecommerce.project.model.Category;
+import com.ecommerce.project.model.Cart;
+import com.ecommerce.project.model.CartItem;
+import com.ecommerce.project.model.Coupon;
 import com.ecommerce.project.model.Order;
 import com.ecommerce.project.model.OrderItem;
 import com.ecommerce.project.model.Payment;
 import com.ecommerce.project.model.Product;
 import com.ecommerce.project.model.ProductStatus;
 import com.ecommerce.project.model.User;
+import com.ecommerce.project.repositories.CartItemRepository;
+import com.ecommerce.project.repositories.CartRepository;
 import com.ecommerce.project.repositories.CategoryRepository;
+import com.ecommerce.project.repositories.CouponRepository;
 import com.ecommerce.project.repositories.OrderItemRepository;
 import com.ecommerce.project.repositories.OrderRepository;
 import com.ecommerce.project.repositories.PaymentRepository;
@@ -55,6 +61,15 @@ class MarketplaceWorkflowIntegrationTests {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private CouponRepository couponRepository;
+
+    @Autowired
+    private CartRepository cartRepository;
+
+    @Autowired
+    private CartItemRepository cartItemRepository;
 
     @Autowired
     private PaymentRepository paymentRepository;
@@ -169,5 +184,65 @@ class MarketplaceWorkflowIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.canReview").value(true))
                 .andExpect(jsonPath("$.alreadyReviewed").value(false));
+    }
+
+    @Test
+    @WithMockUser(username = "user1", roles = "USER")
+    void applyingCouponUpdatesCartTotalsForBuyer() throws Exception {
+        User buyer = userRepository.findByUserName("user1").orElseThrow();
+        User seller = userRepository.findByUserName("seller1").orElseThrow();
+
+        Category category = new Category();
+        category.setCategoryName("Phones");
+        category = categoryRepository.save(category);
+
+        Product product = new Product();
+        product.setProductName("Flagship Phone");
+        product.setDescription("Testing coupon discount calculation");
+        product.setImage("default.png");
+        product.setQuantity(10);
+        product.setPrice(1000);
+        product.setDiscount(10);
+        product.setSpecialPrice(900);
+        product.setDeleted(false);
+        product.setProductStatus(ProductStatus.ACTIVE);
+        product.setCategory(category);
+        product.setUser(seller);
+        product = productRepository.save(product);
+
+        Cart cart = new Cart();
+        cart.setUser(buyer);
+        cart.setTotalPrice(1800.0);
+        cart.setDiscountAmount(0.0);
+        cart = cartRepository.save(cart);
+
+        CartItem cartItem = new CartItem();
+        cartItem.setCart(cart);
+        cartItem.setProduct(product);
+        cartItem.setQuantity(2);
+        cartItem.setDiscount(product.getDiscount());
+        cartItem.setProductPrice(product.getSpecialPrice());
+        cartItemRepository.save(cartItem);
+        cart.getCartItems().add(cartItem);
+
+        Coupon coupon = new Coupon();
+        coupon.setCode("SAVE10");
+        coupon.setDescription("Ten percent off");
+        coupon.setDiscountPercentage(10.0);
+        coupon.setMinimumOrderAmount(500.0);
+        coupon.setActive(true);
+        couponRepository.save(coupon);
+
+        Map<String, String> request = new HashMap<>();
+        request.put("code", "SAVE10");
+
+        mockMvc.perform(post("/api/carts/users/cart/coupon")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.appliedCouponCode").value("SAVE10"))
+                .andExpect(jsonPath("$.subtotalPrice").value(1800.0))
+                .andExpect(jsonPath("$.discountAmount").value(180.0))
+                .andExpect(jsonPath("$.totalPrice").value(1620.0));
     }
 }

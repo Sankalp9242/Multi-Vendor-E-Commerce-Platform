@@ -1,7 +1,7 @@
 import React from 'react'
 import { formatPriceCalculation } from '../../utils/formatPrice'
 
-const OrderSummary = ({ totalPrice, cart, address, paymentMethod}) => {
+const OrderSummary = ({ totalPrice, subtotalPrice, discountAmount, appliedCouponCode, cart, address, paymentMethod}) => {
   return (
     <div className="container mx-auto px-4 mb-8">
      <div className="flex flex-wrap">
@@ -77,14 +77,18 @@ const OrderSummary = ({ totalPrice, cart, address, paymentMethod}) => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Products</span>
-                <span>${formatPriceCalculation(totalPrice, 1)}</span>
+                <span>${formatPriceCalculation(subtotalPrice || totalPrice, 1)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Tax (0%)</span>
                 <span>$0.00</span>
               </div>
+              <div className="flex justify-between text-emerald-700">
+                <span>Coupon {appliedCouponCode ? `(${appliedCouponCode})` : ""}</span>
+                <span>-${formatPriceCalculation(discountAmount || 0, 1)}</span>
+              </div>
               <div className="flex justify-between font-semibold">
-                <span>SubTotal</span>
+                <span>Total</span>
                 <span>${formatPriceCalculation(totalPrice, 1)}</span>
               </div>
             </div>

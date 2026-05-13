@@ -23,4 +23,10 @@ public interface CartService {
     void updateProductInCarts(Long cartId, Long productId);
 
     String createOrUpdateCartWithItems(List<CartItemDTO> cartItems);
+
+    CartDTO getLoggedInUserCart();
+
+    CartDTO applyCouponToLoggedInCart(String couponCode);
+
+    CartDTO removeCouponFromLoggedInCart();
 }

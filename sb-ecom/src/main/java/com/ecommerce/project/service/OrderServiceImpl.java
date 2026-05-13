@@ -112,6 +112,9 @@ public class OrderServiceImpl implements OrderService {
         Order order = new Order();
         order.setEmail(emailId);
         order.setOrderDate(LocalDate.now());
+        order.setSubtotalAmount(calculateCartSubtotal(cartItems));
+        order.setDiscountAmount(defaultDouble(cart.getDiscountAmount()));
+        order.setCouponCode(cart.getAppliedCouponCode());
         order.setTotalAmount(cart.getTotalPrice());
         order.setOrderStatus(resolveInitialOrderStatus(paymentVerification.paymentStatus()));
         order.setAddress(address);
@@ -156,6 +159,8 @@ public class OrderServiceImpl implements OrderService {
         cartItemRepository.deleteAllByCartId(cart.getCartId());
         cart.getCartItems().clear();
         cart.setTotalPrice(0.0);
+        cart.setDiscountAmount(0.0);
+        cart.setAppliedCouponCode(null);
         cartRepository.save(cart);
 
         return mapOrderToDto(savedOrder, null);
@@ -325,6 +330,16 @@ public class OrderServiceImpl implements OrderService {
         } catch (StripeException e) {
             throw new APIException("Unable to verify Stripe payment");
         }
+    }
+
+    private double calculateCartSubtotal(List<CartItem> cartItems) {
+        return cartItems.stream()
+                .mapToDouble(item -> item.getProductPrice() * item.getQuantity())
+                .sum();
+    }
+
+    private double defaultDouble(Double value) {
+        return value == null ? 0.0 : value;
     }
 
     private String resolveInitialOrderStatus(String paymentStatus) {

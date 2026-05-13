@@ -1,6 +1,8 @@
 const initialState = {
     analytics: {},
     commission: {},
+    coupons: [],
+    couponPagination: {},
 };
 
 export const adminReducer = (state = initialState, action) => {
@@ -14,6 +16,12 @@ export const adminReducer = (state = initialState, action) => {
             return {
                 ...state,
                 commission: action.payload,
+            };
+        case "FETCH_COUPONS":
+            return {
+                ...state,
+                coupons: action.payload,
+                couponPagination: action.pagination || {},
             };
             
         default:

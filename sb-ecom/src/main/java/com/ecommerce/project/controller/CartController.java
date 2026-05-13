@@ -52,14 +52,8 @@ public class CartController {
 
     @GetMapping("/carts/users/cart")
     public ResponseEntity<CartDTO> getCartById(){
-        String emailId = authUtil.loggedInEmail();
-        Cart cart = cartRepository.findCartByEmail(emailId);
-        if (cart == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        Long cartId = cart.getCartId();
-        CartDTO cartDTO = cartService.getCart(emailId, cartId);
-        return new ResponseEntity<CartDTO>(cartDTO, HttpStatus.OK);
+        CartDTO cartDTO = cartService.getLoggedInUserCart();
+        return new ResponseEntity<>(cartDTO, HttpStatus.OK);
     }
 
     @PutMapping("/cart/products/{productId}/quantity/{operation}")

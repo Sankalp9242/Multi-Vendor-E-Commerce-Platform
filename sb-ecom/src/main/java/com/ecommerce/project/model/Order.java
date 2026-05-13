@@ -34,6 +34,9 @@ public class Order {
     @JoinColumn(name = "payment_id")
     private Payment payment;
 
+    private Double subtotalAmount;
+    private Double discountAmount;
+    private String couponCode;
     private Double totalAmount;
     private String orderStatus;
     private String carrierName;

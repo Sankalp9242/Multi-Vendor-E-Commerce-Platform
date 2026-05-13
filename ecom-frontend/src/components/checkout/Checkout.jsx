@@ -15,7 +15,7 @@ const Checkout = () => {
     const [activeStep, setActiveStep] = useState(0);
     const dispatch = useDispatch();
     const { isLoading, errorMessage } = useSelector((state) => state.errors);
-    const { cart, totalPrice } = useSelector((state) => state.carts);
+    const { cart, totalPrice, subtotalPrice, discountAmount, appliedCouponCode } = useSelector((state) => state.carts);
     const { address, selectedUserCheckoutAddress } = useSelector(
         (state) => state.auth
     )
@@ -71,6 +71,9 @@ const Checkout = () => {
                 {activeStep === 1 && <PaymentMethod />}
                 {activeStep === 2 && <OrderSummary 
                                         totalPrice={totalPrice}
+                                        subtotalPrice={subtotalPrice}
+                                        discountAmount={discountAmount}
+                                        appliedCouponCode={appliedCouponCode}
                                         cart={cart}
                                         address={selectedUserCheckoutAddress}
                                         paymentMethod={paymentMethod}/>}

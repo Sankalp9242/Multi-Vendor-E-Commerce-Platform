@@ -13,5 +13,8 @@ import java.util.List;
 public class CartDTO {
     private Long cartId;
     private Double totalPrice = 0.0;
+    private Double subtotalPrice = 0.0;
+    private Double discountAmount = 0.0;
+    private String appliedCouponCode;
     private List<ProductDTO> products = new ArrayList<>();
 }
