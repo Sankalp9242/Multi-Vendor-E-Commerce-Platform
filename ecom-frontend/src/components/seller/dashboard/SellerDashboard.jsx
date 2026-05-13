@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { FaBoxOpen, FaShoppingCart, FaWallet } from "react-icons/fa";
 import { MdAttachMoney, MdOutlinePendingActions } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import { analyticsAction, fetchSellerOrders } from "../../../store/actions";
 import Loader from "../../shared/Loader";
 import ErrorPage from "../../shared/ErrorPage";
@@ -45,8 +46,18 @@ const SellerDashboard = () => {
   return (
     <div className="space-y-8 pt-10">
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">
-        <p className="font-semibold text-slate-800">{user?.storeName || "Your store"}</p>
-        <p>{user?.storeDescription || "Add and manage your catalog, then track orders and earnings here."}</p>
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="font-semibold text-slate-800">{user?.storeName || "Your store"}</p>
+            <p>{user?.storeDescription || "Add and manage your catalog, then track orders and earnings here."}</p>
+          </div>
+          <Link
+            to="/seller/profile"
+            className="inline-flex rounded-md border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+          >
+            Edit Store Profile
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

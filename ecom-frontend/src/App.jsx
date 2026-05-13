@@ -24,6 +24,7 @@ import UserProfile from "./components/user/UserProfile";
 import SellerDashboard from './components/seller/dashboard/SellerDashboard';
 import SellerOrders from './components/seller/orders/SellerOrders';
 import SellerProducts from './components/seller/products/SellerProducts';
+import SellerProfile from './components/seller/profile/SellerProfile';
 import UserReports from './components/reports/UserReports';
 import SellerReports from './components/reports/SellerReports';
 import AdminReports from './components/reports/AdminReports';
@@ -78,6 +79,7 @@ function App() {
           <Route path="products" element={<SellerProducts />} />
           <Route path="orders" element={<SellerOrders />} />
           <Route path="reports" element={<SellerReports />} />
+          <Route path="profile" element={<SellerProfile />} />
         </Route>
     </Route>
 

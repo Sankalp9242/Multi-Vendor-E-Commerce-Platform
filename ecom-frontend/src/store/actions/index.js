@@ -291,6 +291,44 @@ export const logOutUser = (navigate) => async (dispatch) => {
     navigate("/login");
 };
 
+export const fetchCurrentUser = () => async (dispatch, getState) => {
+    try {
+        const { data } = await api.get("/auth/user");
+        const existingAuth = getState().auth.user || JSON.parse(localStorage.getItem("auth") || "null");
+        const mergedUser = {
+            ...existingAuth,
+            ...data,
+            jwtToken: data?.jwtToken || existingAuth?.jwtToken,
+        };
+        dispatch({ type: "LOGIN_USER", payload: mergedUser });
+        localStorage.setItem("auth", JSON.stringify(mergedUser));
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+export const updateSellerProfile =
+    (sendData, toast, setLoader, navigate) => async (dispatch, getState) => {
+        try {
+            setLoader?.(true);
+            const { data } = await api.put("/seller/profile", sendData);
+            const existingAuth = getState().auth.user || JSON.parse(localStorage.getItem("auth") || "null");
+            const mergedUser = {
+                ...existingAuth,
+                ...data,
+                jwtToken: data?.jwtToken || existingAuth?.jwtToken,
+            };
+            dispatch({ type: "LOGIN_USER", payload: mergedUser });
+            localStorage.setItem("auth", JSON.stringify(mergedUser));
+            toast.success("Store profile updated successfully");
+            navigate?.("/seller");
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Failed to update seller profile");
+        } finally {
+            setLoader?.(false);
+        }
+    };
+
 export const addUpdateUserAddress =
      (sendData, toast, addressId, setOpenAddressModal) => async (dispatch) => {
     /*

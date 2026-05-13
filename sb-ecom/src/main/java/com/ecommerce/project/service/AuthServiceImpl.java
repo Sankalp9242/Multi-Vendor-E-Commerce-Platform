@@ -4,6 +4,7 @@ import com.ecommerce.project.model.AppRole;
 import com.ecommerce.project.model.Role;
 import com.ecommerce.project.model.User;
 import com.ecommerce.project.payload.AuthenticationResult;
+import com.ecommerce.project.payload.SellerProfileUpdateDTO;
 import com.ecommerce.project.payload.SellerStatusUpdateDTO;
 import com.ecommerce.project.payload.UserDTO;
 import com.ecommerce.project.payload.UserResponse;
@@ -201,6 +202,52 @@ public class AuthServiceImpl implements AuthService {
             seller.setSellerActive(sellerStatusUpdateDTO.getSellerActive());
         }
         return modelMapper.map(userRepository.save(seller), UserDTO.class);
+    }
+
+    @Override
+    public UserInfoResponse updateSellerProfile(SellerProfileUpdateDTO sellerProfileUpdateDTO) {
+        User currentUser = userRepository.findById(getCurrentUserId())
+                .orElseThrow(() -> new RuntimeException("Seller not found"));
+
+        boolean isSeller = currentUser.getRoles().stream().anyMatch(role -> role.getRoleName() == AppRole.ROLE_SELLER);
+        if (!isSeller) {
+            throw new RuntimeException("User is not a seller");
+        }
+
+        currentUser.setStoreName(sellerProfileUpdateDTO.getStoreName().trim());
+        currentUser.setStoreDescription(sellerProfileUpdateDTO.getStoreDescription().trim());
+        userRepository.save(currentUser);
+
+        return buildUserInfoResponse(currentUser);
+    }
+
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        return userDetails.getId();
+    }
+
+    private UserInfoResponse buildUserInfoResponse(User currentUser) {
+        List<String> roles = currentUser.getRoles().stream()
+                .map(role -> role.getRoleName().name())
+                .sorted((left, right) -> Integer.compare(
+                        ROLE_PRIORITY.getOrDefault(left, Integer.MAX_VALUE),
+                        ROLE_PRIORITY.getOrDefault(right, Integer.MAX_VALUE)
+                ))
+                .collect(Collectors.toList());
+
+        UserInfoResponse response = new UserInfoResponse(
+                currentUser.getUserId(),
+                currentUser.getUserName(),
+                roles,
+                currentUser.getEmail(),
+                null
+        );
+        response.setSellerApproved(currentUser.getSellerApproved());
+        response.setSellerActive(currentUser.getSellerActive());
+        response.setStoreName(currentUser.getStoreName());
+        response.setStoreDescription(currentUser.getStoreDescription());
+        return response;
     }
 
 
