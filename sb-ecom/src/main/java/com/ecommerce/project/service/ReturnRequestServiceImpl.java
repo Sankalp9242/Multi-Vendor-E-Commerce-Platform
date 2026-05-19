@@ -12,6 +12,7 @@ import com.ecommerce.project.model.User;
 import com.ecommerce.project.payload.ReturnRequestResponseDTO;
 import com.ecommerce.project.repositories.OrderItemRepository;
 import com.ecommerce.project.repositories.OrderRepository;
+import com.ecommerce.project.repositories.PaymentRepository;
 import com.ecommerce.project.repositories.ProductRepository;
 import com.ecommerce.project.repositories.ReturnRequestRepository;
 import com.ecommerce.project.repositories.UserRepository;
@@ -47,6 +48,9 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     @Override
     @Transactional
@@ -143,6 +147,7 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
 
         if (targetStatus == ReturnStatus.REFUND_PROCESSED) {
             restockReturnedItem(request.getOrderItem());
+            syncOrderPaymentRefundStatus(request.getOrder());
         }
 
         return toDto(returnRequestRepository.save(request));
@@ -261,6 +266,7 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
                 product.getProductName(),
                 orderItem.getQuantity(),
                 orderItem.getOrderedProductPrice(),
+                orderItem.getOrderedProductPrice() * orderItem.getQuantity(),
                 request.getBuyer().getEmail(),
                 request.getSeller().getStoreName(),
                 request.getReason(),
@@ -282,5 +288,24 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
 
     private String trimOrNull(String value) {
         return hasText(value) ? value.trim() : null;
+    }
+
+    private void syncOrderPaymentRefundStatus(Order order) {
+        if (order.getPayment() == null) {
+            return;
+        }
+
+        List<OrderItem> orderItems = orderItemRepository.findByOrderOrderId(order.getOrderId());
+        boolean allItemsRefunded = orderItems.stream()
+                .allMatch(orderItem -> returnRequestRepository.existsRefundedReturnForOrderItem(
+                        orderItem.getOrderItemId(),
+                        REFUND_COMPLETED_STATUSES
+                ));
+
+        order.getPayment().setPgStatus(allItemsRefunded ? "refunded" : "partially_refunded");
+        order.getPayment().setPgResponseMessage(allItemsRefunded
+                ? "Refund completed for all returned items"
+                : "Refund completed for one or more returned items");
+        paymentRepository.save(order.getPayment());
     }
 }

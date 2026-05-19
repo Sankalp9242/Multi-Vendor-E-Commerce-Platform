@@ -20,6 +20,7 @@ public class ReturnRequestResponseDTO {
     private String productName;
     private Integer quantity;
     private Double orderedProductPrice;
+    private Double refundAmount;
     private String buyerEmail;
     private String sellerStoreName;
     private String reason;

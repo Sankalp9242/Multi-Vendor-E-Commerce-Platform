@@ -9,6 +9,61 @@ import {
   fetchUserOrders,
 } from "../../store/actions";
 
+const RETURN_STEPS = [
+  "REQUESTED",
+  "APPROVED",
+  "PICKUP_SCHEDULED",
+  "PRODUCT_RECEIVED",
+  "REFUND_PROCESSED",
+  "CLOSED",
+];
+
+const getReturnStepState = (status, step) => {
+  const normalizedStatus = (status || "").toUpperCase();
+
+  if (normalizedStatus === "REJECTED") {
+    return step === "REQUESTED" ? "completed" : "cancelled";
+  }
+
+  if (normalizedStatus === "UNDER_REVIEW") {
+    return step === "REQUESTED" ? "completed" : "upcoming";
+  }
+
+  const currentIndex = RETURN_STEPS.indexOf(normalizedStatus);
+  const stepIndex = RETURN_STEPS.indexOf(step);
+
+  if (stepIndex < currentIndex) {
+    return "completed";
+  }
+
+  if (stepIndex === currentIndex) {
+    return "current";
+  }
+
+  return "upcoming";
+};
+
+const statusBadgeClass = (status) => {
+  switch ((status || "").toUpperCase()) {
+    case "CLOSED":
+      return "bg-emerald-100 text-emerald-700";
+    case "REFUND_PROCESSED":
+      return "bg-teal-100 text-teal-700";
+    case "PRODUCT_RECEIVED":
+      return "bg-sky-100 text-sky-700";
+    case "PICKUP_SCHEDULED":
+      return "bg-indigo-100 text-indigo-700";
+    case "APPROVED":
+      return "bg-blue-100 text-blue-700";
+    case "UNDER_REVIEW":
+      return "bg-amber-100 text-amber-800";
+    case "REJECTED":
+      return "bg-rose-100 text-rose-700";
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+};
+
 const UserReturns = () => {
   const dispatch = useDispatch();
   const { buyerReturns } = useSelector((state) => state.returns);
@@ -171,7 +226,7 @@ const UserReturns = () => {
                     <p className="text-sm text-slate-500">Order #{item.orderId}</p>
                     <p className="text-sm text-slate-500">Status: {item.status}</p>
                   </div>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeClass(item.status)}`}>
                     {item.status}
                   </span>
                 </div>
@@ -180,9 +235,74 @@ const UserReturns = () => {
                   <p><strong>Reason:</strong> {item.reason}</p>
                   <p><strong>Requested On:</strong> {item.createdAt?.slice(0, 10) || "N/A"}</p>
                   <p><strong>Description:</strong> {item.description || "N/A"}</p>
+                  <p><strong>Refund Amount:</strong> Rs. {item.refundAmount ?? 0}</p>
                   <p><strong>Seller Comment:</strong> {item.sellerComment || "N/A"}</p>
                   <p><strong>Admin Comment:</strong> {item.adminComment || "N/A"}</p>
                 </div>
+
+                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="mb-4 text-sm font-semibold text-slate-700">Return Timeline</p>
+
+                  {item.status === "REJECTED" ? (
+                    <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                      Seller rejected this return request. You can escalate it for admin review if needed.
+                    </div>
+                  ) : item.status === "UNDER_REVIEW" ? (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      This return is currently under admin review after your dispute.
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+                      {RETURN_STEPS.map((step) => {
+                        const stepState = getReturnStepState(item.status, step);
+                        const isCompleted = stepState === "completed";
+                        const isCurrent = stepState === "current";
+                        const isCancelled = stepState === "cancelled";
+
+                        return (
+                          <div key={step} className="flex items-start gap-3">
+                            <div
+                              className={`mt-0.5 h-4 w-4 rounded-full border-2 ${
+                                isCompleted
+                                  ? "border-emerald-600 bg-emerald-600"
+                                  : isCurrent
+                                    ? "border-sky-600 bg-sky-100"
+                                    : isCancelled
+                                      ? "border-rose-300 bg-rose-100"
+                                      : "border-slate-300 bg-white"
+                              }`}
+                            />
+                            <div>
+                              <p
+                                className={`text-sm font-semibold ${
+                                  isCompleted
+                                    ? "text-emerald-700"
+                                    : isCurrent
+                                      ? "text-sky-700"
+                                      : isCancelled
+                                        ? "text-rose-500"
+                                        : "text-slate-500"
+                                }`}
+                              >
+                                {step}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {isCompleted ? "Completed" : isCurrent ? "Current stage" : "Pending"}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {(item.status === "REFUND_PROCESSED" || item.status === "CLOSED") && (
+                  <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    Refund for this returned item has been processed. Refund amount: <strong>Rs. {item.refundAmount ?? 0}</strong>.
+                    {item.status === "CLOSED" ? " The return is fully closed." : " The return will close after final confirmation."}
+                  </div>
+                )}
 
                 {item.status === "REJECTED" && (
                   <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
