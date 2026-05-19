@@ -96,4 +96,16 @@ public class ReturnRequestController {
                 )
         );
     }
+
+    @PutMapping("/admin/returns/{returnId}/process-refund")
+    public ResponseEntity<ReturnRequestResponseDTO> processRefund(@PathVariable Long returnId,
+                                                                  @Valid @RequestBody ReturnDecisionDTO decisionDTO) {
+        return ResponseEntity.ok(returnRequestService.processRefund(returnId, decisionDTO.getComment()));
+    }
+
+    @PutMapping("/admin/returns/{returnId}/close")
+    public ResponseEntity<ReturnRequestResponseDTO> closeReturn(@PathVariable Long returnId,
+                                                                @Valid @RequestBody ReturnDecisionDTO decisionDTO) {
+        return ResponseEntity.ok(returnRequestService.closeReturn(returnId, decisionDTO.getComment()));
+    }
 }

@@ -1198,6 +1198,38 @@ export const reviewAdminReturnAction =
     }
   };
 
+export const processAdminRefundAction =
+  (returnId, comment, toast, setLoader, onSuccess) => async (dispatch) => {
+    try {
+      setLoader?.(true);
+      await api.put(`/admin/returns/${returnId}/process-refund`, { comment });
+      toast.success("Refund processed successfully");
+      await dispatch(fetchAdminReturns());
+      await dispatch(fetchBuyerReturns());
+      onSuccess?.();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to process refund");
+    } finally {
+      setLoader?.(false);
+    }
+  };
+
+export const closeAdminReturnAction =
+  (returnId, comment, toast, setLoader, onSuccess) => async (dispatch) => {
+    try {
+      setLoader?.(true);
+      await api.put(`/admin/returns/${returnId}/close`, { comment });
+      toast.success("Return closed successfully");
+      await dispatch(fetchAdminReturns());
+      await dispatch(fetchBuyerReturns());
+      onSuccess?.();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to close return");
+    } finally {
+      setLoader?.(false);
+    }
+  };
+
 export const fetchUserReports = () => async (dispatch) => {
   try {
     dispatch({ type: "IS_FETCHING" });

@@ -16,6 +16,8 @@ import com.ecommerce.project.repositories.PaymentRepository;
 import com.ecommerce.project.repositories.ProductRepository;
 import com.ecommerce.project.repositories.ReturnRequestRepository;
 import com.ecommerce.project.repositories.UserRepository;
+import com.stripe.exception.StripeException;
+import com.stripe.model.Refund;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -51,6 +53,9 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
 
     @Autowired
     private PaymentRepository paymentRepository;
+
+    @Autowired
+    private StripeService stripeService;
 
     @Override
     @Transactional
@@ -131,8 +136,8 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
         Set<ReturnStatus> allowedNextStatuses = switch (currentStatus) {
             case APPROVED -> EnumSet.of(ReturnStatus.PICKUP_SCHEDULED);
             case PICKUP_SCHEDULED -> EnumSet.of(ReturnStatus.PRODUCT_RECEIVED);
-            case PRODUCT_RECEIVED -> EnumSet.of(ReturnStatus.REFUND_PROCESSED);
-            case REFUND_PROCESSED -> EnumSet.of(ReturnStatus.CLOSED);
+            case PRODUCT_RECEIVED,
+                 REFUND_PROCESSED -> EnumSet.noneOf(ReturnStatus.class);
             default -> EnumSet.noneOf(ReturnStatus.class);
         };
 
@@ -143,11 +148,6 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
         request.setStatus(targetStatus);
         if (hasText(comment)) {
             request.setSellerComment(comment.trim());
-        }
-
-        if (targetStatus == ReturnStatus.REFUND_PROCESSED) {
-            restockReturnedItem(request.getOrderItem());
-            syncOrderPaymentRefundStatus(request.getOrder());
         }
 
         return toDto(returnRequestRepository.save(request));
@@ -179,6 +179,39 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
         ensureStatus(request, ReturnStatus.UNDER_REVIEW, "Only disputed returns can be reviewed by admin");
         request.setAdminComment(trimOrNull(comment));
         request.setStatus(approve ? ReturnStatus.APPROVED : ReturnStatus.REJECTED);
+        return toDto(returnRequestRepository.save(request));
+    }
+
+    @Override
+    @Transactional
+    public ReturnRequestResponseDTO processRefund(Long returnRequestId, String comment) {
+        ReturnRequest request = returnRequestRepository.findById(returnRequestId)
+                .orElseThrow(() -> new ResourceNotFoundException("ReturnRequest", "id", returnRequestId));
+
+        ensureStatus(request, ReturnStatus.PRODUCT_RECEIVED,
+                "Refund can only be processed after the seller confirms product receipt");
+
+        processGatewayRefund(request);
+        restockReturnedItem(request.getOrderItem());
+
+        request.setStatus(ReturnStatus.REFUND_PROCESSED);
+        request.setAdminComment(trimOrNull(comment));
+        ReturnRequest savedRequest = returnRequestRepository.save(request);
+        syncOrderPaymentRefundStatus(savedRequest.getOrder());
+        return toDto(savedRequest);
+    }
+
+    @Override
+    @Transactional
+    public ReturnRequestResponseDTO closeReturn(Long returnRequestId, String comment) {
+        ReturnRequest request = returnRequestRepository.findById(returnRequestId)
+                .orElseThrow(() -> new ResourceNotFoundException("ReturnRequest", "id", returnRequestId));
+
+        ensureStatus(request, ReturnStatus.REFUND_PROCESSED,
+                "Only refund-processed returns can be closed");
+
+        request.setStatus(ReturnStatus.CLOSED);
+        request.setAdminComment(trimOrNull(comment));
         return toDto(returnRequestRepository.save(request));
     }
 
@@ -307,5 +340,33 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
                 ? "Refund completed for all returned items"
                 : "Refund completed for one or more returned items");
         paymentRepository.save(order.getPayment());
+    }
+
+    private void processGatewayRefund(ReturnRequest request) {
+        Order order = request.getOrder();
+        if (order.getPayment() == null) {
+            return;
+        }
+
+        String method = trimOrNull(order.getPayment().getPaymentMethod());
+        String paymentIntentId = trimOrNull(order.getPayment().getPgPaymentId());
+
+        if (method == null || paymentIntentId == null) {
+            return;
+        }
+
+        if ("online".equalsIgnoreCase(method) || "stripe".equalsIgnoreCase(method)) {
+            try {
+                Long refundAmountInPaise = Math.round(
+                        request.getOrderItem().getOrderedProductPrice()
+                                * request.getOrderItem().getQuantity()
+                                * 100
+                );
+                Refund refund = stripeService.refundPaymentIntent(paymentIntentId, refundAmountInPaise);
+                order.getPayment().setPgResponseMessage("Stripe refund processed: " + refund.getId());
+            } catch (StripeException exception) {
+                throw new APIException("Unable to process Stripe refund for this return");
+            }
+        }
     }
 }

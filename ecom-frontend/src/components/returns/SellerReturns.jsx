@@ -12,8 +12,6 @@ import {
 const nextStatusMap = {
   APPROVED: "PICKUP_SCHEDULED",
   PICKUP_SCHEDULED: "PRODUCT_RECEIVED",
-  PRODUCT_RECEIVED: "REFUND_PROCESSED",
-  REFUND_PROCESSED: "CLOSED",
 };
 
 const SellerReturns = () => {
@@ -135,6 +133,18 @@ const SellerReturns = () => {
                         >
                           {loaderId === item.id ? "Processing..." : `Move to ${nextStatus}`}
                         </button>
+                      )}
+
+                      {item.status === "PRODUCT_RECEIVED" && (
+                        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+                          Product receipt confirmed. Refund will now be processed by admin/platform.
+                        </div>
+                      )}
+
+                      {item.status === "REFUND_PROCESSED" && (
+                        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+                          Refund has been processed by admin. No further seller action is needed.
+                        </div>
                       )}
                     </div>
                   </div>

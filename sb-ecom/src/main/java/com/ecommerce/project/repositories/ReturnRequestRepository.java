@@ -42,7 +42,7 @@ public interface ReturnRequestRepository extends JpaRepository<ReturnRequest, Lo
         JOIN FETCH oi.product p
         JOIN FETCH rr.buyer
         JOIN FETCH rr.seller
-        WHERE rr.status = 'UNDER_REVIEW'
+        WHERE rr.status IN ('UNDER_REVIEW', 'PRODUCT_RECEIVED', 'REFUND_PROCESSED')
         ORDER BY rr.updatedAt DESC""")
     List<ReturnRequest> findAllUnderReview();
 

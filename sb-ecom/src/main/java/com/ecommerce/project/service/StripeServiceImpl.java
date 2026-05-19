@@ -7,9 +7,11 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.CustomerSearchResult;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.Refund;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.CustomerSearchParams;
 import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.param.RefundCreateParams;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
@@ -81,6 +83,17 @@ public class StripeServiceImpl implements StripeService {
     public PaymentIntent retrievePaymentIntent(String paymentIntentId) throws StripeException {
         validateStripeConfigured();
         return PaymentIntent.retrieve(paymentIntentId);
+    }
+
+    @Override
+    public Refund refundPaymentIntent(String paymentIntentId, Long amount) throws StripeException {
+        validateStripeConfigured();
+        RefundCreateParams.Builder builder = RefundCreateParams.builder()
+                .setPaymentIntent(paymentIntentId);
+        if (amount != null && amount > 0) {
+            builder.setAmount(amount);
+        }
+        return Refund.create(builder.build());
     }
 
     private void validateStripeConfigured() {

@@ -22,4 +22,8 @@ public interface ReturnRequestService {
     ReturnRequestResponseDTO disputeReturn(Long returnRequestId, Long buyerId, String comment);
 
     ReturnRequestResponseDTO adminReview(Long returnRequestId, boolean approve, String comment);
+
+    ReturnRequestResponseDTO processRefund(Long returnRequestId, String comment);
+
+    ReturnRequestResponseDTO closeReturn(Long returnRequestId, String comment);
 }

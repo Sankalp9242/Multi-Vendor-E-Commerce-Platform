@@ -317,7 +317,7 @@ class MarketplaceWorkflowIntegrationTests {
 
     @Test
     @WithMockUser(username = "seller1", roles = "SELLER")
-    void sellerCanApproveAndAdvanceReturnWorkflowToRefundProcessed() throws Exception {
+    void sellerCanAdvanceReturnWorkflowUntilProductReceivedAndAdminProcessesRefund() throws Exception {
         User buyer = userRepository.findByUserName("user1").orElseThrow();
         User seller = userRepository.findByUserName("seller1").orElseThrow();
 
@@ -339,7 +339,7 @@ class MarketplaceWorkflowIntegrationTests {
         product.setUser(seller);
         product = productRepository.save(product);
 
-        Payment payment = new Payment("online", "pi_test_refund", "succeeded", "Payment successful", "Stripe");
+        Payment payment = new Payment("cash", null, "succeeded", "Cash payment captured", "Offline");
         payment = paymentRepository.save(payment);
 
         Order order = new Order();
@@ -383,13 +383,22 @@ class MarketplaceWorkflowIntegrationTests {
         advanceReturnStatus(returnRequest.getId(), "PICKUP_SCHEDULED");
         advanceReturnStatus(returnRequest.getId(), "PRODUCT_RECEIVED");
 
-        Map<String, Object> refundRequest = new HashMap<>();
-        refundRequest.put("status", "REFUND_PROCESSED");
-        refundRequest.put("comment", "Refund processed after warehouse inspection");
+        Map<String, Object> sellerRefundAttempt = new HashMap<>();
+        sellerRefundAttempt.put("status", "REFUND_PROCESSED");
+        sellerRefundAttempt.put("comment", "Seller should not process refund");
 
         mockMvc.perform(put("/api/seller/returns/{returnId}/status", returnRequest.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(refundRequest)))
+                        .content(objectMapper.writeValueAsString(sellerRefundAttempt)))
+                .andExpect(status().isBadRequest());
+
+        Map<String, Object> adminRefundRequest = new HashMap<>();
+        adminRefundRequest.put("comment", "Refund processed after warehouse inspection");
+
+        mockMvc.perform(put("/api/admin/returns/{returnId}/process-refund", returnRequest.getId())
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(adminRefundRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("REFUND_PROCESSED"));
 
