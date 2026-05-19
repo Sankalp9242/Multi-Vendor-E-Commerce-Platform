@@ -25,4 +25,5 @@ public class OrderDTO {
     private String carrierName;
     private String trackingNumber;
     private LocalDate estimatedDeliveryDate;
+    private LocalDate deliveredAt;
 }

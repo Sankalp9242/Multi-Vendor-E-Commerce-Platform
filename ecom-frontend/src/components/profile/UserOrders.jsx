@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import { fetchUserOrders } from "../../store/actions";
 import Loader from "../shared/Loader";
 
@@ -45,7 +46,6 @@ const statusBadgeClass = (orderStatus) => {
 
 const UserOrders = () => {
   const dispatch = useDispatch();
-
   const { userOrders } = useSelector((state) => state.orders);
   const { isLoading, errorMessage } = useSelector((state) => state.errors);
 
@@ -61,7 +61,20 @@ const UserOrders = () => {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
-      <h1 className="mb-6 text-3xl font-bold">My Orders</h1>
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">My Orders</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Order tracking stays separate from return handling, so returns are managed from the dedicated returns page.
+          </p>
+        </div>
+        <Link
+          to="/profile/returns"
+          className="rounded-md bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+          Open My Returns
+        </Link>
+      </div>
 
       {!userOrders || userOrders.length === 0 ? (
         <div className="text-center text-gray-500">You have not placed any orders yet.</div>
@@ -118,11 +131,7 @@ const UserOrders = () => {
                               {step}
                             </p>
                             <p className="text-xs text-slate-500">
-                              {isCompleted
-                                ? "Completed"
-                                : isCurrent
-                                  ? "Current stage"
-                                  : "Upcoming"}
+                              {isCompleted ? "Completed" : isCurrent ? "Current stage" : "Upcoming"}
                             </p>
                           </div>
                         </div>
@@ -156,7 +165,7 @@ const UserOrders = () => {
                 <p className="text-gray-600">Carrier: {order.carrierName || "Not assigned yet"}</p>
                 <p className="text-gray-600">Tracking: {order.trackingNumber || "Not available yet"}</p>
                 <p className="text-gray-600">
-                  Estimated Delivery: {order.estimatedDeliveryDate || "Will be updated soon"}
+                  Delivered On: {order.deliveredAt || "Not delivered yet"}
                 </p>
               </div>
             </div>

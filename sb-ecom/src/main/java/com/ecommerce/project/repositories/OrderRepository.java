@@ -14,8 +14,14 @@ import com.ecommerce.project.model.Order;
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("""
-        SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o
-        WHERE UPPER(o.orderStatus) <> 'CANCELLED'""")
+        SELECT COALESCE(SUM(oi.quantity * oi.orderedProductPrice), 0) FROM Order o
+        JOIN o.orderItems oi
+        WHERE UPPER(o.orderStatus) <> 'CANCELLED'
+        AND NOT EXISTS (
+            SELECT 1 FROM ReturnRequest rr
+            WHERE rr.orderItem = oi
+            AND rr.status IN ('REFUND_PROCESSED', 'CLOSED')
+        )""")
     Double getTotalRevenue();
     Page<Order> findByEmail(String email, Pageable pageable);
 
@@ -31,7 +37,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         SELECT COALESCE(SUM(oi.quantity * oi.orderedProductPrice), 0) FROM Order o
         JOIN o.orderItems oi
         WHERE oi.product.user.userId = :sellerId
-        AND UPPER(o.orderStatus) <> 'CANCELLED'""")
+        AND UPPER(o.orderStatus) <> 'CANCELLED'
+        AND NOT EXISTS (
+            SELECT 1 FROM ReturnRequest rr
+            WHERE rr.orderItem = oi
+            AND rr.status IN ('REFUND_PROCESSED', 'CLOSED')
+        )""")
     Double getRevenueBySeller(@Param("sellerId") Long sellerId);
 
     @Query("""
@@ -45,7 +56,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         SELECT COALESCE(SUM(oi.quantity), 0) FROM Order o
         JOIN o.orderItems oi
         WHERE oi.product.user.userId = :sellerId
-        AND UPPER(o.orderStatus) <> 'CANCELLED'""")
+        AND UPPER(o.orderStatus) <> 'CANCELLED'
+        AND NOT EXISTS (
+            SELECT 1 FROM ReturnRequest rr
+            WHERE rr.orderItem = oi
+            AND rr.status IN ('REFUND_PROCESSED', 'CLOSED')
+        )""")
     Long getSoldUnitsBySeller(@Param("sellerId") Long sellerId);
 
     @Query("""

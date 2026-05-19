@@ -11,6 +11,7 @@ import { sellerOrderReducer } from "./sellerOrderReducer";
 import { sellerProductReducer } from "./sellerProductReducer";
 import { reportReducer } from "./reportReducer";
 import { wishlistReducer } from "./wishlistReducer";
+import { returnReducer } from "./returnReducer";
 
 
 
@@ -45,6 +46,7 @@ export const store = configureStore({
       sellerProducts: sellerProductReducer,
       reports: reportReducer,
       wishlist: wishlistReducer,
+      returns: returnReducer,
   },
   preloadedState: initialState,
 });

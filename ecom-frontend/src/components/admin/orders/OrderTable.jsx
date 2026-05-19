@@ -33,10 +33,14 @@ const tableRecords = adminOrder?.map((item) => {
     date: item.orderDate,
     payment: item.payment,
     orderItems: item.orderItems,
+    subtotalAmount: item.subtotalAmount,
+    discountAmount: item.discountAmount,
+    couponCode: item.couponCode,
     addressId: item.addressId,
     carrierName: item.carrierName,
     trackingNumber: item.trackingNumber,
     estimatedDeliveryDate: item.estimatedDeliveryDate,
+    deliveredAt: item.deliveredAt,
   }
 });
 
@@ -112,7 +116,7 @@ const handleView = (order) => {
           open={detailsOpenModal}
           setOpen={setDetailsOpenModal}
           title='Order Details'>
-            <SellerOrderDetails order={selectedItem} />
+            <SellerOrderDetails order={selectedItem} onClose={() => setDetailsOpenModal(false)} />
         </Modal>
       )}
     </div>

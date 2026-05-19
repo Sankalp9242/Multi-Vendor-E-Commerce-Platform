@@ -1,4 +1,5 @@
 import { FaBoxOpen, FaChartBar, FaHome, FaShoppingCart, FaStore, FaTags, FaThList, FaUser } from "react-icons/fa";
+import { MdAssignmentReturn } from "react-icons/md";
 import { bannerImageOne, bannerImageThree, bannerImageTwo } from "./constant";
 
 export const bannerLists = [
@@ -56,6 +57,10 @@ export const adminNavigation = [
     name: "Reports",
     href: "/admin/reports",
     icon: FaChartBar
+  }, {
+    name: "Returns",
+    href: "/admin/returns",
+    icon: MdAssignmentReturn
   }
 ];
 
@@ -74,6 +79,10 @@ export const sellerNavigation = [
     name: "Products", 
     href: "/seller/products", 
     icon: FaBoxOpen
+  }, {
+    name: "Returns",
+    href: "/seller/returns",
+    icon: MdAssignmentReturn
   }, {
     name: "Reports",
     href: "/seller/reports",

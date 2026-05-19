@@ -17,4 +17,6 @@ public class AppConstants {
     public static final String ORDER_STATUS_DELIVERED = "DELIVERED";
     public static final String ORDER_STATUS_CANCELLED = "CANCELLED";
 
+    public static final int RETURN_WINDOW_DAYS = 7;
+
 }

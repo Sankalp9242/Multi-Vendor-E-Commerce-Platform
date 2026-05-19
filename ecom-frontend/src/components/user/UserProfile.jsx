@@ -73,6 +73,12 @@ const UserProfile = () => {
             </button>
           </Link>
 
+          <Link to="/profile/returns">
+            <button className="flex w-[300px] items-center justify-center gap-2 rounded-xs bg-slate-900 px-4 py-2 font-semibold text-white transition duration-500 hover:text-gray-300">
+              My Returns
+            </button>
+          </Link>
+
           <Link to="/profile/reports">
             <button className="flex w-[300px] items-center justify-center gap-2 rounded-xs bg-emerald-700 px-4 py-2 font-semibold text-white transition duration-500 hover:text-gray-300">
               My Reports

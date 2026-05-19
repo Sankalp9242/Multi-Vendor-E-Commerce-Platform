@@ -9,6 +9,8 @@ import com.ecommerce.project.model.OrderItem;
 import com.ecommerce.project.model.Payment;
 import com.ecommerce.project.model.Product;
 import com.ecommerce.project.model.ProductStatus;
+import com.ecommerce.project.model.ReturnRequest;
+import com.ecommerce.project.model.ReturnStatus;
 import com.ecommerce.project.model.User;
 import com.ecommerce.project.repositories.CartItemRepository;
 import com.ecommerce.project.repositories.CartRepository;
@@ -18,6 +20,7 @@ import com.ecommerce.project.repositories.OrderItemRepository;
 import com.ecommerce.project.repositories.OrderRepository;
 import com.ecommerce.project.repositories.PaymentRepository;
 import com.ecommerce.project.repositories.ProductRepository;
+import com.ecommerce.project.repositories.ReturnRequestRepository;
 import com.ecommerce.project.repositories.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -79,6 +82,9 @@ class MarketplaceWorkflowIntegrationTests {
 
     @Autowired
     private OrderItemRepository orderItemRepository;
+
+    @Autowired
+    private ReturnRequestRepository returnRequestRepository;
 
     @Test
     void authUserEndpointRequiresAuthentication() throws Exception {
@@ -244,5 +250,245 @@ class MarketplaceWorkflowIntegrationTests {
                 .andExpect(jsonPath("$.subtotalPrice").value(1800.0))
                 .andExpect(jsonPath("$.discountAmount").value(180.0))
                 .andExpect(jsonPath("$.totalPrice").value(1620.0));
+    }
+
+    @Test
+    @WithMockUser(username = "user1", roles = "USER")
+    void buyerCanCreateReturnForDeliveredOrderItem() throws Exception {
+        User buyer = userRepository.findByUserName("user1").orElseThrow();
+        User seller = userRepository.findByUserName("seller1").orElseThrow();
+
+        Category category = new Category();
+        category.setCategoryName("Appliances");
+        category = categoryRepository.save(category);
+
+        Product product = new Product();
+        product.setProductName("Coffee Machine");
+        product.setDescription("Used for return request testing");
+        product.setImage("default.png");
+        product.setQuantity(5);
+        product.setPrice(10000);
+        product.setDiscount(10);
+        product.setSpecialPrice(9000);
+        product.setDeleted(false);
+        product.setProductStatus(ProductStatus.ACTIVE);
+        product.setCategory(category);
+        product.setUser(seller);
+        product = productRepository.save(product);
+
+        Payment payment = new Payment("online", "pi_test_return", "succeeded", "Payment successful", "Stripe");
+        payment = paymentRepository.save(payment);
+
+        Order order = new Order();
+        order.setEmail(buyer.getEmail());
+        order.setOrderDate(LocalDate.now().minusDays(2));
+        order.setDeliveredAt(LocalDate.now().minusDays(1));
+        order.setTotalAmount(9000.0);
+        order.setOrderStatus("DELIVERED");
+        order.setPayment(payment);
+        order = orderRepository.save(order);
+
+        payment.setOrder(order);
+        paymentRepository.save(payment);
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrder(order);
+        orderItem.setProduct(product);
+        orderItem.setQuantity(1);
+        orderItem.setDiscount(10);
+        orderItem.setOrderedProductPrice(9000.0);
+        orderItem = orderItemRepository.save(orderItem);
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("orderId", order.getOrderId());
+        request.put("orderItemId", orderItem.getOrderItemId());
+        request.put("reason", "Received a damaged item");
+        request.put("description", "Outer body is cracked");
+
+        mockMvc.perform(post("/api/returns/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("REQUESTED"))
+                .andExpect(jsonPath("$.reason").value("Received a damaged item"))
+                .andExpect(jsonPath("$.orderId").value(order.getOrderId()))
+                .andExpect(jsonPath("$.orderItemId").value(orderItem.getOrderItemId()));
+    }
+
+    @Test
+    @WithMockUser(username = "seller1", roles = "SELLER")
+    void sellerCanApproveAndAdvanceReturnWorkflowToRefundProcessed() throws Exception {
+        User buyer = userRepository.findByUserName("user1").orElseThrow();
+        User seller = userRepository.findByUserName("seller1").orElseThrow();
+
+        Category category = new Category();
+        category.setCategoryName("Wearables");
+        category = categoryRepository.save(category);
+
+        Product product = new Product();
+        product.setProductName("Smart Watch");
+        product.setDescription("Used for seller return workflow testing");
+        product.setImage("default.png");
+        product.setQuantity(3);
+        product.setPrice(12000);
+        product.setDiscount(5);
+        product.setSpecialPrice(11400);
+        product.setDeleted(false);
+        product.setProductStatus(ProductStatus.ACTIVE);
+        product.setCategory(category);
+        product.setUser(seller);
+        product = productRepository.save(product);
+
+        Payment payment = new Payment("online", "pi_test_refund", "succeeded", "Payment successful", "Stripe");
+        payment = paymentRepository.save(payment);
+
+        Order order = new Order();
+        order.setEmail(buyer.getEmail());
+        order.setOrderDate(LocalDate.now().minusDays(3));
+        order.setDeliveredAt(LocalDate.now().minusDays(1));
+        order.setTotalAmount(11400.0);
+        order.setOrderStatus("DELIVERED");
+        order.setPayment(payment);
+        order = orderRepository.save(order);
+
+        payment.setOrder(order);
+        paymentRepository.save(payment);
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrder(order);
+        orderItem.setProduct(product);
+        orderItem.setQuantity(1);
+        orderItem.setDiscount(5);
+        orderItem.setOrderedProductPrice(11400.0);
+        orderItem = orderItemRepository.save(orderItem);
+
+        ReturnRequest returnRequest = new ReturnRequest();
+        returnRequest.setOrder(order);
+        returnRequest.setOrderItem(orderItem);
+        returnRequest.setBuyer(buyer);
+        returnRequest.setSeller(seller);
+        returnRequest.setReason("Product stopped working");
+        returnRequest.setStatus(ReturnStatus.REQUESTED);
+        returnRequest = returnRequestRepository.save(returnRequest);
+
+        Map<String, Object> approveRequest = new HashMap<>();
+        approveRequest.put("comment", "Approved after validation");
+
+        mockMvc.perform(put("/api/seller/returns/{returnId}/approve", returnRequest.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(approveRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+
+        advanceReturnStatus(returnRequest.getId(), "PICKUP_SCHEDULED");
+        advanceReturnStatus(returnRequest.getId(), "PRODUCT_RECEIVED");
+
+        Map<String, Object> refundRequest = new HashMap<>();
+        refundRequest.put("status", "REFUND_PROCESSED");
+        refundRequest.put("comment", "Refund processed after warehouse inspection");
+
+        mockMvc.perform(put("/api/seller/returns/{returnId}/status", returnRequest.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(refundRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REFUND_PROCESSED"));
+
+        Product updatedProduct = productRepository.findById(product.getProductId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(4, updatedProduct.getQuantity());
+    }
+
+    @Test
+    @WithMockUser(username = "user1", roles = "USER")
+    void buyerCanDisputeRejectedReturnAndAdminCanReviewIt() throws Exception {
+        User buyer = userRepository.findByUserName("user1").orElseThrow();
+        User seller = userRepository.findByUserName("seller1").orElseThrow();
+
+        Category category = new Category();
+        category.setCategoryName("Accessories");
+        category = categoryRepository.save(category);
+
+        Product product = new Product();
+        product.setProductName("Headphones");
+        product.setDescription("Used for dispute workflow testing");
+        product.setImage("default.png");
+        product.setQuantity(6);
+        product.setPrice(3000);
+        product.setDiscount(0);
+        product.setSpecialPrice(3000);
+        product.setDeleted(false);
+        product.setProductStatus(ProductStatus.ACTIVE);
+        product.setCategory(category);
+        product.setUser(seller);
+        product = productRepository.save(product);
+
+        Payment payment = new Payment("online", "pi_test_dispute", "succeeded", "Payment successful", "Stripe");
+        payment = paymentRepository.save(payment);
+
+        Order order = new Order();
+        order.setEmail(buyer.getEmail());
+        order.setOrderDate(LocalDate.now().minusDays(4));
+        order.setDeliveredAt(LocalDate.now().minusDays(2));
+        order.setTotalAmount(3000.0);
+        order.setOrderStatus("DELIVERED");
+        order.setPayment(payment);
+        order = orderRepository.save(order);
+
+        payment.setOrder(order);
+        paymentRepository.save(payment);
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrder(order);
+        orderItem.setProduct(product);
+        orderItem.setQuantity(1);
+        orderItem.setDiscount(0);
+        orderItem.setOrderedProductPrice(3000.0);
+        orderItem = orderItemRepository.save(orderItem);
+
+        ReturnRequest returnRequest = new ReturnRequest();
+        returnRequest.setOrder(order);
+        returnRequest.setOrderItem(orderItem);
+        returnRequest.setBuyer(buyer);
+        returnRequest.setSeller(seller);
+        returnRequest.setReason("Wrong sound output");
+        returnRequest.setSellerComment("Rejected due to missing proof");
+        returnRequest.setStatus(ReturnStatus.REJECTED);
+        returnRequest = returnRequestRepository.save(returnRequest);
+
+        Map<String, Object> disputeRequest = new HashMap<>();
+        disputeRequest.put("comment", "Uploading additional proof for manual review");
+
+        mockMvc.perform(put("/api/returns/{returnId}/dispute", returnRequest.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(disputeRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UNDER_REVIEW"));
+
+        mockMvc.perform(get("/api/admin/returns").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("UNDER_REVIEW"));
+
+        Map<String, Object> reviewRequest = new HashMap<>();
+        reviewRequest.put("approve", true);
+        reviewRequest.put("comment", "Admin approved the dispute");
+
+        mockMvc.perform(put("/api/admin/returns/{returnId}/review", returnRequest.getId())
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.adminComment").value("Admin approved the dispute"));
+    }
+
+    private void advanceReturnStatus(Long returnId, String statusValue) throws Exception {
+        Map<String, Object> request = new HashMap<>();
+        request.put("status", statusValue);
+        request.put("comment", "Moved to " + statusValue);
+
+        mockMvc.perform(put("/api/seller/returns/{returnId}/status", returnId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(statusValue));
     }
 }

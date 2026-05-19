@@ -30,6 +30,9 @@ import SellerReports from './components/reports/SellerReports';
 import AdminReports from './components/reports/AdminReports';
 import Wishlist from './components/wishlist/Wishlist';
 import Coupons from './components/admin/coupons/Coupons';
+import UserReturns from './components/returns/UserReturns';
+import SellerReturns from './components/returns/SellerReturns';
+import AdminReturns from './components/returns/AdminReturns';
 
 
 function App() {
@@ -58,6 +61,7 @@ function App() {
     <Route path="/order-confirm" element={<PaymentConfirmation />} />
     <Route path="/profile" element={<UserProfile />} />
     <Route path="/profile/orders" element={<UserOrders />} />
+    <Route path="/profile/returns" element={<UserReturns />} />
     <Route path="/profile/reports" element={<UserReports />} />
     <Route path="/wishlist" element={<Wishlist />} />
   </Route>
@@ -72,6 +76,7 @@ function App() {
       <Route path="categories" element={<Category />} />
       <Route path="coupons" element={<Coupons />} />
       <Route path="reports" element={<AdminReports />} />
+      <Route path="returns" element={<AdminReturns />} />
     </Route>
   </Route>
 
@@ -80,6 +85,7 @@ function App() {
           <Route index element={<SellerDashboard />} />
           <Route path="products" element={<SellerProducts />} />
           <Route path="orders" element={<SellerOrders />} />
+          <Route path="returns" element={<SellerReturns />} />
           <Route path="reports" element={<SellerReports />} />
           <Route path="profile" element={<SellerProfile />} />
         </Route>

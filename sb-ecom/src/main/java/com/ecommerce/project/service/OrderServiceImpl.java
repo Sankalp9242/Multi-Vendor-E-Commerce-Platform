@@ -426,6 +426,9 @@ public class OrderServiceImpl implements OrderService {
         order.setCarrierName(resolvedCarrierName);
         order.setTrackingNumber(resolvedTrackingNumber);
         order.setEstimatedDeliveryDate(resolvedEstimatedDeliveryDate);
+        if (AppConstants.ORDER_STATUS_DELIVERED.equals(nextStatus)) {
+            order.setDeliveredAt(LocalDate.now());
+        }
     }
 
     private boolean hasText(String value) {
@@ -464,7 +467,8 @@ public class OrderServiceImpl implements OrderService {
                     AppConstants.ORDER_STATUS_CANCELLED
             );
             case AppConstants.ORDER_STATUS_SHIPPED -> Set.of(AppConstants.ORDER_STATUS_DELIVERED);
-            case AppConstants.ORDER_STATUS_DELIVERED, AppConstants.ORDER_STATUS_CANCELLED -> Set.of();
+            case AppConstants.ORDER_STATUS_DELIVERED,
+                 AppConstants.ORDER_STATUS_CANCELLED -> Set.of();
             default -> throw new APIException("Invalid order status: " + currentStatus);
         };
 

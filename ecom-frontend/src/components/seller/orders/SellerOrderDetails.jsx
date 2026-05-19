@@ -13,7 +13,10 @@ const SellerOrderDetails = ({ order }) => {
           <p><strong>Customer Email:</strong> {order?.email}</p>
           <p><strong>Status:</strong> {order?.status}</p>
           <p><strong>Order Date:</strong> {order?.date}</p>
+          <p><strong>Subtotal Amount:</strong> {formatPrice(order?.subtotalAmount || order?.totalAmount || 0)}</p>
+          <p><strong>Discount Amount:</strong> {formatPrice(order?.discountAmount || 0)}</p>
           <p><strong>Total Amount:</strong> {formatPrice(order?.totalAmount || 0)}</p>
+          <p><strong>Coupon:</strong> {order?.couponCode || "N/A"}</p>
         </div>
 
         <div className="space-y-2 rounded-lg border p-4">
@@ -28,10 +31,11 @@ const SellerOrderDetails = ({ order }) => {
 
       <div className="rounded-lg border p-4">
         <h3 className="mb-4 text-lg font-semibold text-slate-800">Shipping Info</h3>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-4">
           <p><strong>Carrier:</strong> {order?.carrierName || "N/A"}</p>
           <p><strong>Tracking:</strong> {order?.trackingNumber || "N/A"}</p>
           <p><strong>Estimated Delivery:</strong> {order?.estimatedDeliveryDate || "N/A"}</p>
+          <p><strong>Delivered On:</strong> {order?.deliveredAt || "N/A"}</p>
         </div>
       </div>
 

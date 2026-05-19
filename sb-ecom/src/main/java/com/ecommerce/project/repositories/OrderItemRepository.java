@@ -9,4 +9,6 @@ import com.ecommerce.project.model.OrderItem;
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     boolean existsByProductProductId(Long productId);
+
+    java.util.List<OrderItem> findByOrderOrderId(Long orderId);
 }

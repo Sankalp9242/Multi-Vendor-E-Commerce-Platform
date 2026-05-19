@@ -1036,7 +1036,7 @@ export const updateSellerStatusDashboard =
   };
 
 
-  export const fetchUserOrders = () => async (dispatch) => {
+export const fetchUserOrders = () => async (dispatch) => {
   try {
     dispatch({ type: "IS_FETCHING" });
 
@@ -1064,6 +1064,139 @@ export const updateSellerStatusDashboard =
     });
   }
 };
+
+export const fetchBuyerReturns = () => async (dispatch) => {
+  try {
+    dispatch({ type: "IS_FETCHING" });
+    const { data } = await api.get("/returns/my-returns");
+    dispatch({ type: "FETCH_BUYER_RETURNS", payload: data });
+    dispatch({ type: "IS_SUCCESS" });
+  } catch (error) {
+    dispatch({
+      type: "IS_ERROR",
+      payload: error?.response?.data?.message || "Failed to fetch return requests",
+    });
+  }
+};
+
+export const createReturnRequestAction =
+  (sendData, toast, setLoader, onSuccess) => async (dispatch) => {
+    try {
+      setLoader?.(true);
+      await api.post("/returns/create", sendData);
+      toast.success("Return request created successfully");
+      await dispatch(fetchBuyerReturns());
+      await dispatch(fetchUserOrders());
+      onSuccess?.();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to create return request");
+    } finally {
+      setLoader?.(false);
+    }
+  };
+
+export const disputeReturnRequestAction =
+  (returnId, comment, toast, setLoader, onSuccess) => async (dispatch) => {
+    try {
+      setLoader?.(true);
+      await api.put(`/returns/${returnId}/dispute`, { comment });
+      toast.success("Return dispute submitted for admin review");
+      await dispatch(fetchBuyerReturns());
+      onSuccess?.();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to dispute return");
+    } finally {
+      setLoader?.(false);
+    }
+  };
+
+export const fetchSellerReturns = () => async (dispatch) => {
+  try {
+    dispatch({ type: "IS_FETCHING" });
+    const { data } = await api.get("/seller/returns");
+    dispatch({ type: "FETCH_SELLER_RETURNS", payload: data });
+    dispatch({ type: "IS_SUCCESS" });
+  } catch (error) {
+    dispatch({
+      type: "IS_ERROR",
+      payload: error?.response?.data?.message || "Failed to fetch seller returns",
+    });
+  }
+};
+
+export const approveSellerReturnAction =
+  (returnId, comment, toast, setLoader, onSuccess) => async (dispatch) => {
+    try {
+      setLoader?.(true);
+      await api.put(`/seller/returns/${returnId}/approve`, { comment });
+      toast.success("Return approved successfully");
+      await dispatch(fetchSellerReturns());
+      onSuccess?.();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to approve return");
+    } finally {
+      setLoader?.(false);
+    }
+  };
+
+export const rejectSellerReturnAction =
+  (returnId, comment, toast, setLoader, onSuccess) => async (dispatch) => {
+    try {
+      setLoader?.(true);
+      await api.put(`/seller/returns/${returnId}/reject`, { comment });
+      toast.success("Return rejected successfully");
+      await dispatch(fetchSellerReturns());
+      onSuccess?.();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to reject return");
+    } finally {
+      setLoader?.(false);
+    }
+  };
+
+export const updateSellerReturnStatusAction =
+  (returnId, status, comment, toast, setLoader, onSuccess) => async (dispatch) => {
+    try {
+      setLoader?.(true);
+      await api.put(`/seller/returns/${returnId}/status`, { status, comment });
+      toast.success(`Return moved to ${status}`);
+      await dispatch(fetchSellerReturns());
+      onSuccess?.();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to update return status");
+    } finally {
+      setLoader?.(false);
+    }
+  };
+
+export const fetchAdminReturns = () => async (dispatch) => {
+  try {
+    dispatch({ type: "IS_FETCHING" });
+    const { data } = await api.get("/admin/returns");
+    dispatch({ type: "FETCH_ADMIN_RETURNS", payload: data });
+    dispatch({ type: "IS_SUCCESS" });
+  } catch (error) {
+    dispatch({
+      type: "IS_ERROR",
+      payload: error?.response?.data?.message || "Failed to fetch disputed returns",
+    });
+  }
+};
+
+export const reviewAdminReturnAction =
+  (returnId, approve, comment, toast, setLoader, onSuccess) => async (dispatch) => {
+    try {
+      setLoader?.(true);
+      await api.put(`/admin/returns/${returnId}/review`, { approve, comment });
+      toast.success(approve ? "Dispute approved successfully" : "Dispute rejected successfully");
+      await dispatch(fetchAdminReturns());
+      onSuccess?.();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to review dispute");
+    } finally {
+      setLoader?.(false);
+    }
+  };
 
 export const fetchUserReports = () => async (dispatch) => {
   try {

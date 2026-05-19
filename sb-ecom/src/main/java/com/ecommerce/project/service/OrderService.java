@@ -26,5 +26,4 @@ public interface OrderService {
             String sortBy,
             String sortOrder
     );
-
 }
