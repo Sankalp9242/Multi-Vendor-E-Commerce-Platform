@@ -74,6 +74,19 @@ const SellerReports = () => {
         item.count,
       ]),
     },
+    {
+      title: "Returns / Refunds Report",
+      fileName: "seller-return-refund-report",
+      headers: ["Return ID", "Order ID", "Product", "Status", "Reason", "Refund Amount"],
+      rows: (sellerReports?.returnRefundReport || []).map((item) => [
+        item.returnId,
+        item.orderId,
+        item.productName,
+        item.returnStatus,
+        item.reason,
+        Number(item.refundAmount || 0).toFixed(2),
+      ]),
+    },
   ];
 
   const exportReport = (report) => ({
@@ -180,6 +193,23 @@ const SellerReports = () => {
                   </div>
                 ))
               : <p>No order status data available.</p>}
+          </div>
+        </section>
+
+        <section className="rounded-lg border bg-white p-5 shadow-sm xl:col-span-2">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <h2 className="text-xl font-semibold">Returns / Refunds Report</h2>
+            <ReportExportActions compact {...exportReport(reportSections[6])} />
+          </div>
+          <div className="space-y-2 text-sm text-slate-600">
+            {sellerReports?.returnRefundReport?.length
+              ? sellerReports.returnRefundReport.map((item) => (
+                  <div key={item.returnId} className="flex justify-between border-b py-2 last:border-b-0">
+                    <span>Return #{item.returnId} - {item.productName} - {item.returnStatus}</span>
+                    <span>${Number(item.refundAmount || 0).toFixed(2)}</span>
+                  </div>
+                ))
+              : <p>No return or refund records available.</p>}
           </div>
         </section>
       </div>

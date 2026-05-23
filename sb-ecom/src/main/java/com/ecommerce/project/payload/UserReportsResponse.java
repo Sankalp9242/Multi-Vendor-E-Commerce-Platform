@@ -14,4 +14,5 @@ public class UserReportsResponse {
     private List<PaymentHistoryDTO> paymentHistoryReport;
     private List<DeliveryTrackingDTO> deliveryTrackingReport;
     private List<MonthlySpendingDTO> monthlySpendingReport;
+    private List<ReturnRefundReportDTO> returnRefundReport;
 }

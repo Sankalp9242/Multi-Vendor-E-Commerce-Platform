@@ -46,6 +46,16 @@ public interface ReturnRequestRepository extends JpaRepository<ReturnRequest, Lo
         ORDER BY rr.updatedAt DESC""")
     List<ReturnRequest> findAllUnderReview();
 
+    @Query("""
+        SELECT rr FROM ReturnRequest rr
+        JOIN FETCH rr.order o
+        JOIN FETCH rr.orderItem oi
+        JOIN FETCH oi.product p
+        JOIN FETCH rr.buyer
+        JOIN FETCH rr.seller
+        ORDER BY rr.updatedAt DESC, rr.createdAt DESC""")
+    List<ReturnRequest> findAllWithDetailsOrderByUpdatedAtDesc();
+
     boolean existsByOrderItemOrderItemId(Long orderItemId);
 
     boolean existsByOrderItemOrderItemIdAndStatusIn(Long orderItemId, Collection<ReturnStatus> statuses);

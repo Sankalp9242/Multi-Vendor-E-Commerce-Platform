@@ -18,4 +18,5 @@ public class AdminReportsResponse {
     private List<CategorySalesReportDTO> categoryWiseSalesReport;
     private List<SellerPerformanceReportDTO> topSellersReport;
     private List<TopProductReportDTO> topProductsReport;
+    private List<ReturnRefundReportDTO> returnRefundManagementReport;
 }

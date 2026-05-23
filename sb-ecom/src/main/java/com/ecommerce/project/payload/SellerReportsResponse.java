@@ -16,4 +16,5 @@ public class SellerReportsResponse {
     private EarningsReportDTO commissionDeductionReport;
     private List<InventoryStockReportDTO> inventoryStockReport;
     private List<OrderStatusCountDTO> pendingVsDeliveredOrdersReport;
+    private List<ReturnRefundReportDTO> returnRefundReport;
 }

@@ -60,6 +60,19 @@ const UserReports = () => {
         Number(month.totalAmount || 0).toFixed(2),
       ]),
     },
+    {
+      title: "Return / Refund Report",
+      fileName: "user-return-refund-report",
+      headers: ["Return ID", "Order ID", "Product", "Status", "Reason", "Refund Amount"],
+      rows: (userReports?.returnRefundReport || []).map((item) => [
+        item.returnId,
+        item.orderId,
+        item.productName,
+        item.returnStatus,
+        item.reason,
+        Number(item.refundAmount || 0).toFixed(2),
+      ]),
+    },
   ];
 
   const exportReport = (report) => ({
@@ -145,6 +158,23 @@ const UserReports = () => {
                 </div>
               ))
             : <p>No monthly spending data available.</p>}
+        </div>
+      </section>
+
+      <section className="rounded-lg border bg-white p-5 shadow-sm">
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <h2 className="text-xl font-semibold">Return / Refund Report</h2>
+          <ReportExportActions compact {...exportReport(reportSections[4])} />
+        </div>
+        <div className="space-y-2 text-sm text-slate-600">
+          {userReports?.returnRefundReport?.length
+            ? userReports.returnRefundReport.map((item) => (
+                <div key={item.returnId} className="flex justify-between border-b py-2 last:border-b-0">
+                  <span>Return #{item.returnId} - Order #{item.orderId} - {item.returnStatus}</span>
+                  <span>${Number(item.refundAmount || 0).toFixed(2)}</span>
+                </div>
+              ))
+            : <p>No return or refund history available.</p>}
         </div>
       </section>
     </div>

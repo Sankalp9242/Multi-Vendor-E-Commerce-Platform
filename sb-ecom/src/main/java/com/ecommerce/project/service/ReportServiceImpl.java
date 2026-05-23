@@ -8,10 +8,12 @@ import com.ecommerce.project.model.OrderItem;
 import com.ecommerce.project.model.Payment;
 import com.ecommerce.project.model.Product;
 import com.ecommerce.project.model.ProductStatus;
+import com.ecommerce.project.model.ReturnRequest;
 import com.ecommerce.project.model.User;
 import com.ecommerce.project.payload.*;
 import com.ecommerce.project.repositories.OrderRepository;
 import com.ecommerce.project.repositories.ProductRepository;
+import com.ecommerce.project.repositories.ReturnRequestRepository;
 import com.ecommerce.project.repositories.UserRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,9 @@ public class ReportServiceImpl implements ReportService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ReturnRequestRepository returnRequestRepository;
 
     @Autowired
     private PlatformSettingsService platformSettingsService;
@@ -84,11 +89,18 @@ public class ReportServiceImpl implements ReportService {
             monthlySpendingMap.put(monthKey, report);
         }
 
+        List<ReturnRefundReportDTO> returnRefundReport = returnRequestRepository.findAllByBuyerId(
+                userRepository.findByEmail(email).orElseThrow().getUserId()
+        ).stream()
+                .map(this::mapReturnRefundReport)
+                .toList();
+
         return new UserReportsResponse(
                 orderHistoryReport,
                 paymentHistoryReport,
                 deliveryTrackingReport,
-                new ArrayList<>(monthlySpendingMap.values())
+                new ArrayList<>(monthlySpendingMap.values()),
+                returnRefundReport
         );
     }
 
@@ -180,6 +192,10 @@ public class ReportServiceImpl implements ReportService {
                 new OrderStatusCountDTO(AppConstants.ORDER_STATUS_DELIVERED, deliveredCount)
         );
 
+        List<ReturnRefundReportDTO> returnRefundReport = returnRequestRepository.findAllBySellerId(sellerId).stream()
+                .map(this::mapReturnRefundReport)
+                .toList();
+
         return new SellerReportsResponse(
                 ordersReport,
                 productSalesMap.values().stream()
@@ -188,7 +204,8 @@ public class ReportServiceImpl implements ReportService {
                 earningsReport,
                 commissionDeductionReport,
                 inventoryStockReport,
-                pendingVsDeliveredOrdersReport
+                pendingVsDeliveredOrdersReport,
+                returnRefundReport
         );
     }
 
@@ -312,6 +329,11 @@ public class ReportServiceImpl implements ReportService {
                 .limit(8)
                 .toList();
 
+        List<ReturnRefundReportDTO> returnRefundManagementReport = returnRequestRepository.findAllWithDetailsOrderByUpdatedAtDesc()
+                .stream()
+                .map(this::mapReturnRefundReport)
+                .toList();
+
         return new AdminReportsResponse(
                 totalPlatformSales,
                 totalCommissionEarned,
@@ -320,7 +342,8 @@ public class ReportServiceImpl implements ReportService {
                 pendingProductApprovalsReport,
                 categoryWiseSalesReport,
                 sellerPerformanceReport.stream().limit(8).toList(),
-                topProductsReport
+                topProductsReport,
+                returnRefundManagementReport
         );
     }
 
@@ -355,6 +378,34 @@ public class ReportServiceImpl implements ReportService {
                 .mapToDouble(orderItemDTO -> orderItemDTO.getOrderedProductPrice() * orderItemDTO.getQuantity())
                 .sum());
         return dto;
+    }
+
+    private ReturnRefundReportDTO mapReturnRefundReport(ReturnRequest request) {
+        OrderItem orderItem = request.getOrderItem();
+        Product product = orderItem != null ? orderItem.getProduct() : null;
+        double refundAmount = orderItem == null
+                ? 0.0
+                : orderItem.getOrderedProductPrice() * orderItem.getQuantity();
+
+        String sellerName = request.getSeller() == null
+                ? null
+                : (request.getSeller().getStoreName() != null && !request.getSeller().getStoreName().isBlank()
+                    ? request.getSeller().getStoreName()
+                    : request.getSeller().getUserName());
+
+        return new ReturnRefundReportDTO(
+                request.getId(),
+                request.getOrder() != null ? request.getOrder().getOrderId() : null,
+                orderItem != null ? orderItem.getOrderItemId() : null,
+                product != null ? product.getProductName() : "Unknown Product",
+                request.getBuyer() != null ? request.getBuyer().getEmail() : null,
+                sellerName,
+                request.getReason(),
+                request.getStatus() != null ? request.getStatus().name() : "UNKNOWN",
+                refundAmount,
+                request.getCreatedAt(),
+                request.getUpdatedAt()
+        );
     }
 
     private static class SellerPerformanceAccumulator {
