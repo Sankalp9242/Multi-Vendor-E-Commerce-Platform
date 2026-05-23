@@ -31,13 +31,13 @@ const PaymentConfirmation = () => {
       return;
     }
 
-    if (!selectedUserCheckoutAddress?.addressId) {
-      setErrorMessage("Please select an address again before placing the order.");
+    if (processedPaymentIntent) {
+      setOrderCreated(true);
       return;
     }
 
-    if (processedPaymentIntent) {
-      setOrderCreated(true);
+    if (!selectedUserCheckoutAddress?.addressId) {
+      setErrorMessage("Please select an address again before placing the order.");
       return;
     }
 

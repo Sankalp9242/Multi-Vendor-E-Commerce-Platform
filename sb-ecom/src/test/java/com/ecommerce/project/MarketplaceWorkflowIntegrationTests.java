@@ -1,6 +1,7 @@
 package com.ecommerce.project;
 
 import com.ecommerce.project.model.Category;
+import com.ecommerce.project.model.Address;
 import com.ecommerce.project.model.Cart;
 import com.ecommerce.project.model.CartItem;
 import com.ecommerce.project.model.Coupon;
@@ -16,6 +17,7 @@ import com.ecommerce.project.repositories.CartItemRepository;
 import com.ecommerce.project.repositories.CartRepository;
 import com.ecommerce.project.repositories.CategoryRepository;
 import com.ecommerce.project.repositories.CouponRepository;
+import com.ecommerce.project.repositories.AddressRepository;
 import com.ecommerce.project.repositories.OrderItemRepository;
 import com.ecommerce.project.repositories.OrderRepository;
 import com.ecommerce.project.repositories.PaymentRepository;
@@ -23,6 +25,7 @@ import com.ecommerce.project.repositories.ProductRepository;
 import com.ecommerce.project.repositories.ReturnRequestRepository;
 import com.ecommerce.project.repositories.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -40,6 +43,7 @@ import java.util.Map;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -72,6 +76,9 @@ class MarketplaceWorkflowIntegrationTests {
     private CartRepository cartRepository;
 
     @Autowired
+    private AddressRepository addressRepository;
+
+    @Autowired
     private CartItemRepository cartItemRepository;
 
     @Autowired
@@ -85,6 +92,9 @@ class MarketplaceWorkflowIntegrationTests {
 
     @Autowired
     private ReturnRequestRepository returnRequestRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     void authUserEndpointRequiresAuthentication() throws Exception {
@@ -108,6 +118,118 @@ class MarketplaceWorkflowIntegrationTests {
                 .andExpect(jsonPath("$.storeName").value("Seller One"))
                 .andExpect(jsonPath("$.sellerApproved").value(true))
                 .andExpect(jsonPath("$.sellerActive").value(true));
+    }
+
+    @Test
+    @WithMockUser(username = "user1", roles = "USER")
+    void multiSellerCheckoutCreatesSeparateOrdersAndPreventsCrossSellerStatusUpdates() throws Exception {
+        User buyer = userRepository.findByUserName("user1").orElseThrow();
+        User sellerOne = userRepository.findByUserName("seller1").orElseThrow();
+
+        User sellerTwo = new User();
+        sellerTwo.setUserName("seller2");
+        sellerTwo.setEmail("seller2@example.com");
+        sellerTwo.setPassword("password2");
+        sellerTwo.setSellerApproved(true);
+        sellerTwo.setSellerActive(true);
+        sellerTwo.setStoreName("Seller Two");
+        sellerTwo.setStoreDescription("Second marketplace seller for split-order testing.");
+        sellerTwo.getRoles().addAll(sellerOne.getRoles());
+        sellerTwo = userRepository.save(sellerTwo);
+        Long sellerTwoId = sellerTwo.getUserId();
+
+        Category category = new Category();
+        category.setCategoryName("Split Order Category");
+        category = categoryRepository.save(category);
+
+        Product sellerOneProduct = createProduct("Seller One Product", sellerOne, category, 800.0, 720.0, 6);
+        Product sellerTwoProduct = createProduct("Seller Two Product", sellerTwo, category, 500.0, 450.0, 4);
+
+        Cart cart = buyer.getCart();
+        if (cart == null) {
+            cart = new Cart();
+            cart.setUser(buyer);
+            cart = cartRepository.save(cart);
+        } else {
+            cartItemRepository.deleteAllByCartId(cart.getCartId());
+            cart.getCartItems().clear();
+        }
+
+        CartItem itemOne = new CartItem();
+        itemOne.setCart(cart);
+        itemOne.setProduct(sellerOneProduct);
+        itemOne.setQuantity(1);
+        itemOne.setDiscount(sellerOneProduct.getDiscount());
+        itemOne.setProductPrice(sellerOneProduct.getSpecialPrice());
+        itemOne = cartItemRepository.save(itemOne);
+
+        CartItem itemTwo = new CartItem();
+        itemTwo.setCart(cart);
+        itemTwo.setProduct(sellerTwoProduct);
+        itemTwo.setQuantity(1);
+        itemTwo.setDiscount(sellerTwoProduct.getDiscount());
+        itemTwo.setProductPrice(sellerTwoProduct.getSpecialPrice());
+        itemTwo = cartItemRepository.save(itemTwo);
+
+        cart.getCartItems().add(itemOne);
+        cart.getCartItems().add(itemTwo);
+        cart.setDiscountAmount(0.0);
+        cart.setAppliedCouponCode(null);
+        cart.setTotalPrice(1170.0);
+        cartRepository.save(cart);
+
+        Address address = new Address();
+        address.setStreet("123 Buyer Street");
+        address.setBuildingName("Flat 101");
+        address.setCity("Chennai");
+        address.setState("Tamil Nadu");
+        address.setCountry("India");
+        address.setPincode("600001");
+        address.setUser(buyer);
+        address = addressRepository.save(address);
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("addressId", address.getAddressId());
+
+        mockMvc.perform(post("/api/order/users/payments/cash")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.orderItems.length()").value(1));
+
+        entityManager.clear();
+        java.util.List<Order> buyerOrders = orderRepository.findAllByEmailOrderByOrderDateDesc(buyer.getEmail());
+        org.junit.jupiter.api.Assertions.assertEquals(2, buyerOrders.size());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                buyerOrders.stream().allMatch(order -> order.getOrderItems().size() == 1),
+                "Each seller should receive a separate order"
+        );
+
+        Order sellerOneOrder = buyerOrders.stream()
+                .filter(order -> order.getOrderItems().getFirst().getProduct().getUser().getUserId().equals(sellerOne.getUserId()))
+                .findFirst()
+                .orElseThrow();
+        Order sellerTwoOrder = buyerOrders.stream()
+                .filter(order -> order.getOrderItems().getFirst().getProduct().getUser().getUserId().equals(sellerTwoId))
+                .findFirst()
+                .orElseThrow();
+
+        mockMvc.perform(put("/api/seller/orders/{orderId}/status", sellerTwoOrder.getOrderId())
+                        .with(user("seller1").roles("SELLER"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"status":"CONFIRMED"}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(put("/api/seller/orders/{orderId}/status", sellerOneOrder.getOrderId())
+                        .with(user("seller1").roles("SELLER"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"status":"CONFIRMED"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderStatus").value("CONFIRMED"));
     }
 
     @Test
@@ -499,5 +621,21 @@ class MarketplaceWorkflowIntegrationTests {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(statusValue));
+    }
+
+    private Product createProduct(String name, User seller, Category category, double price, double specialPrice, int quantity) {
+        Product product = new Product();
+        product.setProductName(name);
+        product.setDescription(name + " description");
+        product.setImage("default.png");
+        product.setQuantity(quantity);
+        product.setPrice(price);
+        product.setDiscount(((price - specialPrice) / price) * 100);
+        product.setSpecialPrice(specialPrice);
+        product.setDeleted(false);
+        product.setProductStatus(ProductStatus.ACTIVE);
+        product.setCategory(category);
+        product.setUser(seller);
+        return productRepository.save(product);
     }
 }

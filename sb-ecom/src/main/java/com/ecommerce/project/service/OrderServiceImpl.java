@@ -38,9 +38,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -108,52 +110,51 @@ public class OrderServiceImpl implements OrderService {
         }
 
         PaymentVerificationResult paymentVerification = verifyPayment(cart, paymentMethod, pgName, pgPaymentId);
+        List<SellerOrderAllocation> sellerAllocations = groupCartItemsBySeller(cartItems);
+        List<Order> createdOrders = new ArrayList<>();
 
-        Order order = new Order();
-        order.setEmail(emailId);
-        order.setOrderDate(LocalDate.now());
-        order.setSubtotalAmount(calculateCartSubtotal(cartItems));
-        order.setDiscountAmount(defaultDouble(cart.getDiscountAmount()));
-        order.setCouponCode(cart.getAppliedCouponCode());
-        order.setTotalAmount(cart.getTotalPrice());
-        order.setOrderStatus(resolveInitialOrderStatus(paymentVerification.paymentStatus()));
-        order.setAddress(address);
+        for (SellerOrderAllocation allocation : sellerAllocations) {
+            Order order = new Order();
+            order.setEmail(emailId);
+            order.setOrderDate(LocalDate.now());
+            order.setSubtotalAmount(allocation.subtotalAmount());
+            order.setDiscountAmount(allocation.discountAmount());
+            order.setCouponCode(cart.getAppliedCouponCode());
+            order.setTotalAmount(allocation.totalAmount());
+            order.setOrderStatus(resolveInitialOrderStatus(paymentVerification.paymentStatus()));
+            order.setAddress(address);
 
-        Payment payment = new Payment(
-                paymentMethod,
-                paymentVerification.paymentId(),
-                paymentVerification.paymentStatus(),
-                paymentVerification.responseMessage(),
-                paymentVerification.gatewayName()
-        );
-        payment.setOrder(order);
-        payment = paymentRepository.save(payment);
-        order.setPayment(payment);
+            Payment payment = new Payment(
+                    paymentMethod,
+                    paymentVerification.paymentId(),
+                    paymentVerification.paymentStatus(),
+                    paymentVerification.responseMessage(),
+                    paymentVerification.gatewayName()
+            );
+            payment.setOrder(order);
+            payment = paymentRepository.save(payment);
+            order.setPayment(payment);
 
-        Order savedOrder = orderRepository.save(order);
+            Order savedOrder = orderRepository.save(order);
+            List<OrderItem> orderItems = new ArrayList<>();
 
-        List<OrderItem> orderItems = new ArrayList<>();
-        for (CartItem cartItem : cartItems) {
-            Product product = cartItem.getProduct();
-            validateOrderItem(product, cartItem);
+            for (CartItem cartItem : allocation.cartItems()) {
+                Product product = cartItem.getProduct();
 
-            OrderItem orderItem = new OrderItem();
-            orderItem.setProduct(product);
-            orderItem.setQuantity(cartItem.getQuantity());
-            orderItem.setDiscount(cartItem.getDiscount());
-            orderItem.setOrderedProductPrice(cartItem.getProductPrice());
-            orderItem.setOrder(savedOrder);
-            orderItems.add(orderItem);
-        }
+                OrderItem orderItem = new OrderItem();
+                orderItem.setProduct(product);
+                orderItem.setQuantity(cartItem.getQuantity());
+                orderItem.setDiscount(cartItem.getDiscount());
+                orderItem.setOrderedProductPrice(cartItem.getProductPrice());
+                orderItem.setOrder(savedOrder);
+                orderItems.add(orderItem);
 
-        orderItems = orderItemRepository.saveAll(orderItems);
-        savedOrder.setOrderItems(orderItems);
+                product.setQuantity(product.getQuantity() - cartItem.getQuantity());
+                productRepository.save(product);
+            }
 
-        for (CartItem item : cartItems) {
-            int quantity = item.getQuantity();
-            Product product = item.getProduct();
-            product.setQuantity(product.getQuantity() - quantity);
-            productRepository.save(product);
+            savedOrder.setOrderItems(orderItemRepository.saveAll(orderItems));
+            createdOrders.add(savedOrder);
         }
 
         cartItemRepository.deleteAllByCartId(cart.getCartId());
@@ -163,7 +164,7 @@ public class OrderServiceImpl implements OrderService {
         cart.setAppliedCouponCode(null);
         cartRepository.save(cart);
 
-        return mapOrderToDto(savedOrder, null);
+        return mapOrderToDto(createdOrders.getFirst(), null);
     }
 
     @Override
@@ -204,7 +205,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public void syncStripePaymentStatus(String paymentIntentId, String paymentStatus, String responseMessage) {
-        paymentRepository.findByPgPaymentId(paymentIntentId).ifPresent(payment -> {
+        paymentRepository.findAllByPgPaymentId(paymentIntentId).forEach(payment -> {
             payment.setPgStatus(paymentStatus);
             payment.setPgResponseMessage(responseMessage);
             paymentRepository.save(payment);
@@ -338,8 +339,56 @@ public class OrderServiceImpl implements OrderService {
                 .sum();
     }
 
+    private List<SellerOrderAllocation> groupCartItemsBySeller(List<CartItem> cartItems) {
+        Map<Long, List<CartItem>> cartItemsBySeller = new LinkedHashMap<>();
+
+        for (CartItem cartItem : cartItems) {
+            Product product = cartItem.getProduct();
+            validateOrderItem(product, cartItem);
+            cartItemsBySeller
+                    .computeIfAbsent(product.getUser().getUserId(), ignored -> new ArrayList<>())
+                    .add(cartItem);
+        }
+
+        double cartSubtotal = calculateCartSubtotal(cartItems);
+        double remainingDiscount = defaultDouble(cartItems.getFirst().getCart().getDiscountAmount());
+        double remainingTotal = defaultDouble(cartItems.getFirst().getCart().getTotalPrice());
+        List<Map.Entry<Long, List<CartItem>>> sellerEntries = new ArrayList<>(cartItemsBySeller.entrySet());
+        List<SellerOrderAllocation> allocations = new ArrayList<>();
+
+        for (int index = 0; index < sellerEntries.size(); index++) {
+            Map.Entry<Long, List<CartItem>> entry = sellerEntries.get(index);
+            List<CartItem> sellerCartItems = entry.getValue();
+            double sellerSubtotal = roundCurrency(calculateCartSubtotal(sellerCartItems));
+            boolean lastSeller = index == sellerEntries.size() - 1;
+
+            double sellerDiscount;
+            double sellerTotal;
+            if (lastSeller) {
+                sellerDiscount = roundCurrency(remainingDiscount);
+                sellerTotal = roundCurrency(remainingTotal);
+            } else {
+                double discountShare = cartSubtotal == 0.0
+                        ? 0.0
+                        : defaultDouble(sellerSubtotal * defaultDouble(cartItems.getFirst().getCart().getDiscountAmount()) / cartSubtotal);
+                sellerDiscount = roundCurrency(discountShare);
+                sellerTotal = roundCurrency(sellerSubtotal - sellerDiscount);
+                remainingDiscount = roundCurrency(remainingDiscount - sellerDiscount);
+                remainingTotal = roundCurrency(remainingTotal - sellerTotal);
+            }
+
+            allocations.add(new SellerOrderAllocation(sellerCartItems, sellerSubtotal, sellerDiscount, sellerTotal));
+        }
+
+        return allocations;
+    }
+
     private double defaultDouble(Double value) {
         return value == null ? 0.0 : value;
+    }
+
+    private double roundCurrency(double amount) {
+        return Math.round(amount * 100.0) / 100.0;
     }
 
     private String resolveInitialOrderStatus(String paymentStatus) {
@@ -485,6 +534,14 @@ public class OrderServiceImpl implements OrderService {
             String paymentId,
             String paymentStatus,
             String responseMessage
+    ) {
+    }
+
+    private record SellerOrderAllocation(
+            List<CartItem> cartItems,
+            double subtotalAmount,
+            double discountAmount,
+            double totalAmount
     ) {
     }
 }

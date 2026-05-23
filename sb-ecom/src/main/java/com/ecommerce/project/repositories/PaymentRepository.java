@@ -6,10 +6,10 @@ import org.springframework.stereotype.Repository;
 
 import com.ecommerce.project.model.Payment;
 
-import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long>{
 
-    Optional<Payment> findByPgPaymentId(String pgPaymentId);
+    List<Payment> findAllByPgPaymentId(String pgPaymentId);
 }
