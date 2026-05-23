@@ -89,6 +89,9 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     StripeService stripeService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @Override
     @Transactional
     public OrderDTO placeOrder(String emailId, Long addressId, String paymentMethod, String pgName, String pgPaymentId, String pgStatus, String pgResponseMessage) {
@@ -163,6 +166,14 @@ public class OrderServiceImpl implements OrderService {
         cart.setDiscountAmount(0.0);
         cart.setAppliedCouponCode(null);
         cartRepository.save(cart);
+
+        notificationService.sendBuyerOrderPlacedEmail(emailId, createdOrders);
+        createdOrders.forEach(order -> {
+            User seller = resolveSellerFromOrder(order);
+            if (seller != null) {
+                notificationService.sendSellerNewOrderEmail(seller, order);
+            }
+        });
 
         return mapOrderToDto(createdOrders.getFirst(), null);
     }
@@ -293,6 +304,7 @@ public class OrderServiceImpl implements OrderService {
 
         order.setOrderStatus(normalizedNextStatus);
         orderRepository.save(order);
+        notificationService.sendOrderStatusEmail(order, normalizedCurrentStatus);
         return mapOrderToDto(order, sellerId);
     }
 
@@ -482,6 +494,15 @@ public class OrderServiceImpl implements OrderService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private User resolveSellerFromOrder(Order order) {
+        if (order.getOrderItems() == null || order.getOrderItems().isEmpty()) {
+            return null;
+        }
+
+        Product product = order.getOrderItems().getFirst().getProduct();
+        return product != null ? product.getUser() : null;
     }
 
     private String normalizeOrderStatus(String status) {

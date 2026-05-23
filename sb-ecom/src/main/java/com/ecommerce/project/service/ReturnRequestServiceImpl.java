@@ -57,6 +57,9 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
     @Autowired
     private StripeService stripeService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @Override
     @Transactional
     public ReturnRequestResponseDTO createReturn(Long buyerId, Long orderId, Long orderItemId, String reason, String description, String imageUrl) {
@@ -79,7 +82,9 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
         request.setImageUrl(hasText(imageUrl) ? imageUrl.trim() : null);
         request.setStatus(ReturnStatus.REQUESTED);
 
-        return toDto(returnRequestRepository.save(request));
+        ReturnRequest savedRequest = returnRequestRepository.save(request);
+        notificationService.sendReturnRequestedEmail(savedRequest);
+        return toDto(savedRequest);
     }
 
     @Override
@@ -198,6 +203,7 @@ public class ReturnRequestServiceImpl implements ReturnRequestService {
         request.setAdminComment(trimOrNull(comment));
         ReturnRequest savedRequest = returnRequestRepository.save(request);
         syncOrderPaymentRefundStatus(savedRequest.getOrder());
+        notificationService.sendRefundProcessedEmail(savedRequest);
         return toDto(savedRequest);
     }
 

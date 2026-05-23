@@ -64,6 +64,9 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     ModelMapper modelMapper;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @Override
     public AuthenticationResult login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager
@@ -177,6 +180,7 @@ public class AuthServiceImpl implements AuthService {
     public UserDTO updateSellerStatus(Long sellerId, SellerStatusUpdateDTO sellerStatusUpdateDTO) {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new RuntimeException("Seller not found"));
+        boolean wasApproved = Boolean.TRUE.equals(seller.getSellerApproved());
         boolean isSeller = seller.getRoles().stream().anyMatch(role -> role.getRoleName() == AppRole.ROLE_SELLER);
         if (!isSeller) {
             throw new RuntimeException("User is not a seller");
@@ -187,7 +191,11 @@ public class AuthServiceImpl implements AuthService {
         if (sellerStatusUpdateDTO.getSellerActive() != null) {
             seller.setSellerActive(sellerStatusUpdateDTO.getSellerActive());
         }
-        return modelMapper.map(userRepository.save(seller), UserDTO.class);
+        User savedSeller = userRepository.save(seller);
+        if (!wasApproved && Boolean.TRUE.equals(savedSeller.getSellerApproved())) {
+            notificationService.sendSellerApprovalEmail(savedSeller);
+        }
+        return modelMapper.map(savedSeller, UserDTO.class);
     }
 
     @Override

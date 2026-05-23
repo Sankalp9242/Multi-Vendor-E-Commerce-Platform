@@ -60,6 +60,9 @@ public class ProductServiceImpl implements ProductService {
     @Autowired
     AuthUtil authUtil;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @Value("${project.image}")
     private String path;
 
@@ -345,7 +348,9 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
         product.setProductStatus(ProductStatus.ACTIVE);
-        return mapProductToDto(productRepository.save(product));
+        Product savedProduct = productRepository.save(product);
+        notificationService.sendProductApprovedEmail(savedProduct);
+        return mapProductToDto(savedProduct);
     }
 
     @Override
