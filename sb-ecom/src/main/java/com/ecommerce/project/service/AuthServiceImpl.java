@@ -76,7 +76,8 @@ public class AuthServiceImpl implements AuthService {
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
+        String jwtToken = jwtUtils.generateTokenFromUsername(userDetails.getUsername());
+        ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(jwtToken);
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
@@ -89,7 +90,7 @@ public class AuthServiceImpl implements AuthService {
         User currentUser = userRepository.findByUserName(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         UserInfoResponse response = buildUserInfoResponse(currentUser);
-        response.setJwtToken(jwtCookie.toString());
+        response.setJwtToken(jwtToken);
 
         return new AuthenticationResult(response, jwtCookie);
     }

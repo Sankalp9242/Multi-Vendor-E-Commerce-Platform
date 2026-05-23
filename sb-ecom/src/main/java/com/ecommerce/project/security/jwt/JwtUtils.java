@@ -31,6 +31,18 @@ public class JwtUtils {
     @Value("${spring.ecom.app.jwtCookieName}")
     private String jwtCookie;
 
+    @Value("${app.security.cookie-secure:false}")
+    private boolean cookieSecure;
+
+    @Value("${app.security.cookie-same-site:Lax}")
+    private String cookieSameSite;
+
+    @Value("${app.security.cookie-domain:}")
+    private String cookieDomain;
+
+    @Value("${app.security.cookie-max-age-seconds:86400}")
+    private long cookieMaxAgeSeconds;
+
     public String getJwtFromCookies(HttpServletRequest request) {
         Cookie cookie = WebUtils.getCookie(request, jwtCookie);
         if (cookie != null) {
@@ -50,27 +62,19 @@ public class JwtUtils {
 
     public ResponseCookie generateJwtCookie(UserDetailsImpl userPrincipal) {
         String jwt = generateTokenFromUsername(userPrincipal.getUsername());
+        return generateJwtCookie(jwt);
+    }
 
-        ResponseCookie cookie = ResponseCookie.from(jwtCookie, jwt)
-                .path("/")
-                .maxAge(24 * 60 * 60)
-                .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
+    public ResponseCookie generateJwtCookie(String jwt) {
+        return cookieBuilder(jwt)
+                .maxAge(cookieMaxAgeSeconds)
                 .build();
-
-        return cookie;
     }
 
     public ResponseCookie getCleanJwtCookie() {
-        ResponseCookie cookie = ResponseCookie.from(jwtCookie, null)
-                .path("/")
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
+        return cookieBuilder("")
+                .maxAge(0)
                 .build();
-
-        return cookie;
     }
 
     public String generateTokenFromUsername(String username) {
@@ -91,6 +95,20 @@ public class JwtUtils {
 
     private Key key() {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+    }
+
+    private ResponseCookie.ResponseCookieBuilder cookieBuilder(String value) {
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(jwtCookie, value)
+                .path("/")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite(cookieSameSite);
+
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            builder.domain(cookieDomain.trim());
+        }
+
+        return builder;
     }
 
     public boolean validateJwtToken(String authToken) {
