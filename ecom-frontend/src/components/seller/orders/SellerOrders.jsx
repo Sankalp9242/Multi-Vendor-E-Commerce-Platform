@@ -18,6 +18,8 @@ const SellerOrders = () => {
       : 1;
 
     params.set("pageNumber", currentPage - 1);
+    params.set("sortBy", "orderDate");
+    params.set("sortOrder", "desc");
     dispatch(fetchSellerOrders(params.toString()));
   }, [dispatch, searchParams]);
 

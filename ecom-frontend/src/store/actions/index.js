@@ -1,4 +1,19 @@
 import api from "../../api/api"
+import { sortOrdersByWorkflowPriority } from "../../utils/orderSorting";
+
+const buildOrderQueryString = (queryString = "") => {
+    const params = new URLSearchParams(queryString);
+    if (!params.has("pageNumber")) {
+        params.set("pageNumber", "0");
+    }
+    if (!params.has("sortBy")) {
+        params.set("sortBy", "orderDate");
+    }
+    if (!params.has("sortOrder")) {
+        params.set("sortOrder", "desc");
+    }
+    return params.toString();
+};
 
 export const fetchProducts = (queryString) => async (dispatch) => {
     try {
@@ -143,11 +158,12 @@ export const fetchSellerProducts = (queryString = "") => async (dispatch) => {
 export const fetchSellerOrders = (queryString = "") => async (dispatch) => {
     try {
         dispatch({ type: "IS_FETCHING" });
-        const res = await api.get(`/seller/orders?${queryString}`);
+        const normalizedQuery = buildOrderQueryString(queryString);
+        const res = await api.get(`/seller/orders?${normalizedQuery}`);
         dispatch({
           type: "FETCH_SELLER_ORDERS",
           payload: {
-          orders: res.data.content,
+          orders: sortOrdersByWorkflowPriority(res.data.content),
           pagination: {
             pageNumber: res.data.pageNumber,
             pageSize: res.data.pageSize,
@@ -689,10 +705,11 @@ export const getOrdersForDashboard = (queryString, isAdmin) => async (dispatch) 
     try {
         dispatch({ type: "IS_FETCHING" });
         const endpoint = isAdmin ? "/admin/orders" : "/seller/orders";
-        const { data } = await api.get(`${endpoint}?${queryString}`);
+        const normalizedQuery = buildOrderQueryString(queryString);
+        const { data } = await api.get(`${endpoint}?${normalizedQuery}`);
         dispatch({
             type: "GET_ADMIN_ORDERS",
-            payload: data.content,
+            payload: sortOrdersByWorkflowPriority(data.content),
             pageNumber: data.pageNumber,
             pageSize: data.pageSize,
             totalElements: data.totalElements,
@@ -1040,11 +1057,11 @@ export const fetchUserOrders = () => async (dispatch) => {
   try {
     dispatch({ type: "IS_FETCHING" });
 
-    const { data } = await api.get("/user/orders");
+    const { data } = await api.get("/user/orders?sortBy=orderDate&sortOrder=desc");
 
     dispatch({
       type: "GET_USER_ORDERS",
-      payload: data.content,
+      payload: sortOrdersByWorkflowPriority(data.content),
       pagination: {
         pageNumber: data.pageNumber,
         pageSize: data.pageSize,
