@@ -5,4 +5,20 @@ const api = axios.create({
     withCredentials: true,
 });
 
+api.interceptors.request.use((config) => {
+    try {
+        const auth = JSON.parse(localStorage.getItem("auth") || "null");
+        const jwtToken = auth?.jwtToken;
+
+        if (jwtToken) {
+            config.headers = config.headers ?? {};
+            config.headers.Authorization = `Bearer ${jwtToken}`;
+        }
+    } catch (error) {
+        console.warn("Failed to attach auth token", error);
+    }
+
+    return config;
+});
+
 export default api;
