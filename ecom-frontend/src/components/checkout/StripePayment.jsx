@@ -12,20 +12,31 @@ const isSecureStripeContext =
   window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1";
 
-const stripePromise = isSecureStripeContext
-  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+const stripePublishableKey = (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "").trim();
+const stripePromise = isSecureStripeContext && stripePublishableKey
+  ? loadStripe(stripePublishableKey)
   : null;
 
 const StripePayment = () => {
   const dispatch = useDispatch();
   const { clientSecret } = useSelector((state) => state.auth);
   const { totalPrice } = useSelector((state) => state.carts);
-  const { isLoading } = useSelector((state) => state.errors);
+  const { isLoading, errorMessage } = useSelector((state) => state.errors);
   const { user, selectedUserCheckoutAddress } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (!clientSecret) {
+      const storedClientSecret = JSON.parse(localStorage.getItem("client-secret") || "null");
+      if (storedClientSecret) {
+        dispatch({ type: "CLIENT_SECRET", payload: storedClientSecret });
+      }
+    }
+  }, [clientSecret, dispatch]);
 
   useEffect(() => {
     if (
       isSecureStripeContext &&
+      stripePublishableKey &&
       !clientSecret &&
       totalPrice &&
       user?.email &&
@@ -55,6 +66,14 @@ const StripePayment = () => {
     );
   }
 
+  if (!stripePublishableKey) {
+    return (
+      <Alert severity="error" className="mx-auto max-w-lg">
+        Stripe publishable key is missing. Set <code>VITE_STRIPE_PUBLISHABLE_KEY</code> in the frontend environment.
+      </Alert>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-lg">
@@ -63,14 +82,28 @@ const StripePayment = () => {
     );
   }
 
+  if (errorMessage) {
+    return (
+      <Alert severity="error" className="mx-auto max-w-lg">
+        {errorMessage}
+      </Alert>
+    );
+  }
+
   return (
-    <>
+    <div className="mx-auto max-w-lg">
+      {!clientSecret && (
+        <Alert severity="info">
+          Preparing secure payment form. If this takes too long, go back once and reopen the payment step.
+        </Alert>
+      )}
+
       {clientSecret && stripePromise && (
         <Elements stripe={stripePromise} options={{ clientSecret }}>
           <PaymentForm clientSecret={clientSecret} totalPrice={totalPrice} />
         </Elements>
       )}
-    </>
+    </div>
   );
 };
 
