@@ -6,11 +6,11 @@ import com.ecommerce.project.model.OrderItem;
 import com.ecommerce.project.model.Product;
 import com.ecommerce.project.model.ReturnRequest;
 import com.ecommerce.project.model.User;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
@@ -24,17 +24,43 @@ public class EmailNotificationService implements NotificationService {
     @Autowired(required = false)
     private JavaMailSender mailSender;
 
+    @Autowired(required = false)
+    private AsyncEmailSender asyncEmailSender;
+
     @Value("${app.mail.enabled:false}")
     private boolean mailEnabled;
 
     @Value("${app.mail.from:}")
     private String fromAddress;
 
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
     @Value("${app.mail.support-name:Marketplace Support}")
     private String supportName;
 
     @Value("${app.mail.frontend-base-url:http://localhost:5173/}")
     private String frontendBaseUrl;
+
+    @PostConstruct
+    public void logMailConfiguration() {
+        if (!mailEnabled) {
+            log.info("Email notifications are disabled because app.mail.enabled=false");
+            return;
+        }
+
+        if (mailSender == null || asyncEmailSender == null) {
+            log.warn("Email notifications are enabled but mail sender is not available");
+            return;
+        }
+
+        if (!hasText(resolveFromAddress())) {
+            log.warn("Email notifications are enabled but MAIL_FROM and MAIL_USERNAME are missing");
+            return;
+        }
+
+        log.info("Email notifications are enabled with from address {}", maskEmail(resolveFromAddress()));
+    }
 
     @Override
     public void sendBuyerOrderPlacedEmail(String buyerEmail, List<Order> orders) {
@@ -231,20 +257,11 @@ public class EmailNotificationService implements NotificationService {
     }
 
     private boolean canSend() {
-        return mailEnabled && mailSender != null && fromAddress != null && !fromAddress.isBlank();
+        return mailEnabled && mailSender != null && asyncEmailSender != null && hasText(resolveFromAddress());
     }
 
     private void sendEmail(String to, String subject, String body) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromAddress);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(body);
-            mailSender.send(message);
-        } catch (Exception exception) {
-            log.warn("Unable to send email to {} with subject '{}': {}", to, subject, exception.getMessage());
-        }
+        asyncEmailSender.sendEmail(resolveFromAddress(), to, subject, body);
     }
 
     private String trimTrailingSlash(String value) {
@@ -256,5 +273,30 @@ public class EmailNotificationService implements NotificationService {
 
     private String formatCurrency(Double amount) {
         return amount == null ? "0.00" : String.format("INR %.2f", amount);
+    }
+
+    private String resolveFromAddress() {
+        return hasText(fromAddress) ? fromAddress.trim() : trimToEmpty(mailUsername);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String trimToEmpty(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String maskEmail(String email) {
+        if (!hasText(email)) {
+            return "";
+        }
+
+        int atIndex = email.indexOf("@");
+        if (atIndex <= 1) {
+            return "***" + (atIndex >= 0 ? email.substring(atIndex) : "");
+        }
+
+        return email.charAt(0) + "***" + email.substring(atIndex);
     }
 }
