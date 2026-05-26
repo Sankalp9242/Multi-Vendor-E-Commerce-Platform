@@ -6,6 +6,7 @@ import { decreaseCartQuantity, increaseCartQuantity, removeFromCart } from "../.
 import toast from "react-hot-toast";
 import { formatPrice } from "../../utils/formatPrice";
 import truncateText from "../../utils/truncateText";
+import { getProductImageUrl } from "../../utils/imageUrl";
 
 const ItemContent = ({
     productId,
@@ -52,7 +53,7 @@ const ItemContent = ({
 
                 <div className="md:w-36 sm:w-24 w-12">
                     <img 
-                        src={`${import.meta.env.VITE_BACK_END_URL}/images/${image}`}
+                        src={getProductImageUrl(image)}
                         alt={productName}
                         className="md:h-36 sm:h-24 h-12 w-full object-cover rounded-md"/>
                 

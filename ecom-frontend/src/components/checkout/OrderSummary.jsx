@@ -1,5 +1,6 @@
 import React from 'react'
 import { formatPriceCalculation } from '../../utils/formatPrice'
+import { getProductImageUrl } from '../../utils/imageUrl'
 
 const OrderSummary = ({ totalPrice, subtotalPrice, discountAmount, appliedCouponCode, cart, address, paymentMethod}) => {
   return (
@@ -49,9 +50,7 @@ const OrderSummary = ({ totalPrice, subtotalPrice, discountAmount, appliedCoupon
             <div className='space-y-2'>
                 {cart?.map((item) => (
                     <div key={item?.productId} className='flex items-center'>
-                        <img src={`${import.meta.env.VITE_BACK_END_URL}/images/${
-                            item?.image
-                        }`}
+                        <img src={getProductImageUrl(item?.image)}
                         alt='Product'
                         className='w-12 h-12 rounded-sm'></img>
                     <div className='text-gray-500'>
