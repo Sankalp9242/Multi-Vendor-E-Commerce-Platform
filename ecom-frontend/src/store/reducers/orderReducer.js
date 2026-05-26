@@ -4,6 +4,11 @@ const initialState = {
   pagination: {},
 };
 
+const updateOrderList = (orders, updatedOrder) =>
+  orders.map((order) =>
+    order.orderId === updatedOrder.orderId ? { ...order, ...updatedOrder } : order
+  );
+
 export const orderReducer = (state = initialState, action) => {
   switch (action.type) {
 
@@ -27,6 +32,18 @@ export const orderReducer = (state = initialState, action) => {
         ...state,
         userOrders: action.payload,
         pagination: action.pagination,
+      };
+
+    case "UPDATE_ADMIN_ORDER":
+      return {
+        ...state,
+        adminOrders: updateOrderList(state.adminOrders, action.payload),
+      };
+
+    case "UPDATE_USER_ORDER":
+      return {
+        ...state,
+        userOrders: updateOrderList(state.userOrders, action.payload),
       };
 
     default:

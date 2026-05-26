@@ -6,6 +6,24 @@ const initialState = {
     pagination: {},
 };
 
+const updateProductList = (products, updatedProduct) => {
+    if (!products || !updatedProduct) {
+        return products;
+    }
+
+    return products.map((product) =>
+        product.productId === updatedProduct.productId ? { ...product, ...updatedProduct } : product
+    );
+};
+
+const removeProductFromList = (products, productId) => {
+    if (!products) {
+        return products;
+    }
+
+    return products.filter((product) => product.productId !== productId);
+};
+
 export const productReducer = (state = initialState, action) => {
     switch (action.type) {
         case "FETCH_PRODUCTS":
@@ -46,6 +64,22 @@ export const productReducer = (state = initialState, action) => {
             return {
                 ...state,
                 productReviewEligibility: action.payload,
+            };
+
+        case "UPDATE_PRODUCT_IN_LIST":
+            return {
+                ...state,
+                products: updateProductList(state.products, action.payload),
+            };
+
+        case "REMOVE_PRODUCT_FROM_LIST":
+            return {
+                ...state,
+                products: removeProductFromList(state.products, action.payload),
+                pagination: {
+                    ...state.pagination,
+                    totalElements: Math.max((state.pagination?.totalElements || 1) - 1, 0),
+                },
             };
         
     

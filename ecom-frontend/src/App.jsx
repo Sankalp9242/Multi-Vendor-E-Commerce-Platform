@@ -1,38 +1,39 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import './App.css'
-import Products from './components/products/Products'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Home from './components/home/Home'
 import Navbar from './components/shared/Navbar'
-import About from './components/About'
-import Contact from './components/Contact'
 import { Toaster } from 'react-hot-toast'
-import Cart from './components/cart/Cart'
-import LogIn from './components/auth/LogIn'
 import PrivateRoute from './components/PrivateRoute'
-import Register from './components/auth/Register'
-import Checkout from './components/checkout/Checkout'
-import PaymentConfirmation from './components/checkout/PaymentConfirmation'
-import AdminLayout from './components/admin/AdminLayout'
-import Dashboard from './components/admin/dashboard/Dashboard'
-import AdminProducts from './components/admin/products/AdminProducts'
-import Sellers from './components/admin/sellers/Sellers'
-import Category from './components/admin/categories/Category'
-import Orders from './components/admin/orders/Orders'
-import UserOrders from "./components/profile/UserOrders";
-import UserProfile from "./components/user/UserProfile";
-import SellerDashboard from './components/seller/dashboard/SellerDashboard';
-import SellerOrders from './components/seller/orders/SellerOrders';
-import SellerProducts from './components/seller/products/SellerProducts';
-import SellerProfile from './components/seller/profile/SellerProfile';
-import UserReports from './components/reports/UserReports';
-import SellerReports from './components/reports/SellerReports';
-import AdminReports from './components/reports/AdminReports';
-import Wishlist from './components/wishlist/Wishlist';
-import Coupons from './components/admin/coupons/Coupons';
-import UserReturns from './components/returns/UserReturns';
-import SellerReturns from './components/returns/SellerReturns';
-import AdminReturns from './components/returns/AdminReturns';
+
+const Products = lazy(() => import('./components/products/Products'));
+const Home = lazy(() => import('./components/home/Home'));
+const About = lazy(() => import('./components/About'));
+const Contact = lazy(() => import('./components/Contact'));
+const Cart = lazy(() => import('./components/cart/Cart'));
+const LogIn = lazy(() => import('./components/auth/LogIn'));
+const Register = lazy(() => import('./components/auth/Register'));
+const Checkout = lazy(() => import('./components/checkout/Checkout'));
+const PaymentConfirmation = lazy(() => import('./components/checkout/PaymentConfirmation'));
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
+const Dashboard = lazy(() => import('./components/admin/dashboard/Dashboard'));
+const AdminProducts = lazy(() => import('./components/admin/products/AdminProducts'));
+const Sellers = lazy(() => import('./components/admin/sellers/Sellers'));
+const Category = lazy(() => import('./components/admin/categories/Category'));
+const Orders = lazy(() => import('./components/admin/orders/Orders'));
+const UserOrders = lazy(() => import("./components/profile/UserOrders"));
+const UserProfile = lazy(() => import("./components/user/UserProfile"));
+const SellerDashboard = lazy(() => import('./components/seller/dashboard/SellerDashboard'));
+const SellerOrders = lazy(() => import('./components/seller/orders/SellerOrders'));
+const SellerProducts = lazy(() => import('./components/seller/products/SellerProducts'));
+const SellerProfile = lazy(() => import('./components/seller/profile/SellerProfile'));
+const UserReports = lazy(() => import('./components/reports/UserReports'));
+const SellerReports = lazy(() => import('./components/reports/SellerReports'));
+const AdminReports = lazy(() => import('./components/reports/AdminReports'));
+const Wishlist = lazy(() => import('./components/wishlist/Wishlist'));
+const Coupons = lazy(() => import('./components/admin/coupons/Coupons'));
+const UserReturns = lazy(() => import('./components/returns/UserReturns'));
+const SellerReturns = lazy(() => import('./components/returns/SellerReturns'));
+const AdminReturns = lazy(() => import('./components/returns/AdminReturns'));
 
 
 function App() {
@@ -40,7 +41,8 @@ function App() {
     <React.Fragment>
       <Router>
         <Navbar />
-        <Routes>
+        <Suspense fallback={<div className="min-h-screen" />}>
+          <Routes>
 
   {/* PUBLIC */}
   <Route path="/" element={<Home />} />
@@ -92,7 +94,8 @@ function App() {
     </Route>
 
 
-</Routes>
+          </Routes>
+        </Suspense>
 
       </Router>
       <Toaster position='bottom-center'/>

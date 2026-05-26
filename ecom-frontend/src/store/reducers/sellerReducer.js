@@ -4,6 +4,20 @@ const initialState = {
   analytics: {},
 };
 
+const updateSellerList = (sellers, updatedSeller) => {
+  if (!sellers || !updatedSeller) {
+    return sellers;
+  }
+
+  const updatedSellerId = updatedSeller.userId ?? updatedSeller.id;
+
+  return sellers.map((seller) =>
+    seller.userId === updatedSellerId || seller.id === updatedSellerId
+      ? { ...seller, ...updatedSeller }
+      : seller
+  );
+};
+
 export const sellerReducer = (state = initialState, action) => {
   switch (action.type) {
     case "FETCH_SELLER_ANALYTICS":
@@ -23,6 +37,11 @@ export const sellerReducer = (state = initialState, action) => {
           totalPages: action.totalPages,
           lastPage: action.lastPage,
         },
+      };
+    case "UPDATE_SELLER_IN_LIST":
+      return {
+        ...state,
+        sellers: updateSellerList(state.sellers, action.payload),
       };
     default:
       return state;
