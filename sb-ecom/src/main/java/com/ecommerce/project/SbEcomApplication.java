@@ -14,7 +14,7 @@ public class SbEcomApplication {
 
 		var key = Keys.secretKeyFor(io.jsonwebtoken.SignatureAlgorithm.HS256);
 		String base64Key = Base64.getEncoder().encodeToString(key.getEncoded());
-		System.out.println(base64Key);
+		//System.out.println(base64Key);
 
 
 	}
