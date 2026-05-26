@@ -203,6 +203,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private String constructImageUrl(String imageName) {
+        if (imageName == null || imageName.isBlank()) {
+            return imageName;
+        }
+
+        if (imageName.startsWith("http://") || imageName.startsWith("https://")) {
+            return imageName;
+        }
+
         return imageBaseUrl.endsWith("/") ? imageBaseUrl + imageName : imageBaseUrl + "/" + imageName;
     }
 

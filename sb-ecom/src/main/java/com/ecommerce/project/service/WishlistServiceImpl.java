@@ -122,6 +122,14 @@ public class WishlistServiceImpl implements WishlistService {
     }
 
     private String constructImageUrl(String imageName) {
+        if (imageName == null || imageName.isBlank()) {
+            return imageName;
+        }
+
+        if (imageName.startsWith("http://") || imageName.startsWith("https://")) {
+            return imageName;
+        }
+
         return imageBaseUrl.endsWith("/") ? imageBaseUrl + imageName : imageBaseUrl + "/" + imageName;
     }
 }
